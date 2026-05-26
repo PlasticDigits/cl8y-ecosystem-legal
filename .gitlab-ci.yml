@@ -24,6 +24,11 @@ variables:
     - apt-get update && apt-get install -y pkg-config libssl-dev
     - cd api
 
+.rust-bot:
+  image: rust:1.83-bookworm
+  before_script:
+    - cd bot
+
 lint:rust:
   extends: .rust
   stage: lint
@@ -31,6 +36,14 @@ lint:rust:
     - rustup component add rustfmt clippy
     - cargo fmt --check
     - cargo clippy --all-targets -- -D warnings
+
+lint:rust-bot:
+  extends: .rust-bot
+  stage: lint
+  script:
+    - rustup component add rustfmt clippy
+    - cargo fmt --check
+    - cargo clippy -- -D warnings
 
 test:rust:
   extends: .rust
@@ -52,10 +65,39 @@ test:web:
     - cd web
     - npm ci
     - npm run test
+
+test:e2e:
+  extends: .rust
+  stage: test
+  services:
+    - name: postgres:16-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: cl8y_legal
+    POSTGRES_PASSWORD: cl8y_legal
+    POSTGRES_DB: cl8y_legal
+    DATABASE_URL: postgres://cl8y_legal:cl8y_legal@postgres:5432/cl8y_legal
+    PLAYWRIGHT_API_BASE: http://127.0.0.1:8080
+    CORS_ORIGINS: http://127.0.0.1:5173
+    LEGAL_PUBLIC_BASE_URL: http://127.0.0.1:5173
+    ALLOW_LOCALHOST_PROPERTY: "true"
+    TERMS_SYNC_ON_STARTUP: "false"
+    ADMIN_TOKEN: test-admin
+    TELEGRAM_BOT_TOKEN: "123456:ABC-DEF"
+    RATE_LIMIT_READ: "1000"
+    RATE_LIMIT_WRITE: "1000"
+  before_script:
+    - apt-get update && apt-get install -y pkg-config libssl-dev curl
+    - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    - apt-get install -y nodejs
+    - cd api
+  script:
+    - cargo build
+    - cd ../web
+    - npm ci
+    - npm test
     - npx playwright install --with-deps chromium
     - npm run test:e2e
-  variables:
-    VITE_API_BASE_URL: http://localhost:8080
 
 build:release:
   extends: .rust
@@ -65,6 +107,16 @@ build:release:
   artifacts:
     paths:
       - api/target/release/cl8y-legal-api
+    expire_in: 1 week
+
+build:bot:
+  extends: .rust-bot
+  stage: build
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - bot/target/release/cl8y-terms-bot
     expire_in: 1 week
 
 build:web:

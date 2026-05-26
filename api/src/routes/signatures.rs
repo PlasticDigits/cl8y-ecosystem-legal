@@ -12,7 +12,7 @@ use crate::{
     message::build_telegram_acceptance_message,
     property::resolve_property,
     signatures::{get_signature_for_account, submit_telegram, submit_wallet},
-    telegram::{verify_telegram_login, TelegramAuthPayload},
+    telegram::{verify_telegram_login, verify_telegram_webapp_init_data, TelegramAuthPayload},
     terms::get_latest_terms,
     AppState,
 };
@@ -49,16 +49,24 @@ pub struct WalletSubmitBody {
 #[derive(Debug, Deserialize)]
 pub struct TelegramSubmitBody {
     pub property: String,
-    pub id: i64,
-    pub first_name: String,
+    /// Telegram Login Widget fields (browser).
+    #[serde(default)]
+    pub id: Option<i64>,
+    #[serde(default)]
+    pub first_name: Option<String>,
     #[serde(default)]
     pub last_name: Option<String>,
     #[serde(default)]
     pub username: Option<String>,
     #[serde(default)]
     pub photo_url: Option<String>,
-    pub auth_date: i64,
-    pub hash: String,
+    #[serde(default)]
+    pub auth_date: Option<i64>,
+    #[serde(default)]
+    pub hash: Option<String>,
+    /// Telegram Mini App `Telegram.WebApp.initData` (in-app WebApp).
+    #[serde(default)]
+    pub init_data: Option<String>,
     pub version_label: Option<String>,
 }
 
@@ -137,23 +145,60 @@ async fn telegram(
         .as_deref()
         .ok_or_else(|| AppError::BadRequest("telegram login not configured".into()))?;
 
-    let auth = TelegramAuthPayload {
-        id: body.id,
-        first_name: body.first_name.clone(),
-        last_name: body.last_name.clone(),
-        username: body.username.clone(),
-        photo_url: body.photo_url.clone(),
-        auth_date: body.auth_date,
-        hash: body.hash.clone(),
-    };
-    verify_telegram_login(&auth, bot_token)?;
+    let (user_id, _first_name, _last_name, username, auth_date, proof) =
+        if let Some(init_data) = body.init_data.as_deref().filter(|s| !s.is_empty()) {
+            let (user, auth_date) = verify_telegram_webapp_init_data(init_data, bot_token)?;
+            let proof = serde_json::json!({
+                "type": "telegram_webapp",
+                "auth_date": auth_date,
+            });
+            (
+                user.id,
+                user.first_name,
+                user.last_name,
+                user.username,
+                auth_date,
+                proof,
+            )
+        } else {
+            let id = body
+                .id
+                .ok_or_else(|| AppError::BadRequest("missing telegram auth (widget or init_data)".into()))?;
+            let first_name = body
+                .first_name
+                .clone()
+                .ok_or_else(|| AppError::BadRequest("missing first_name".into()))?;
+            let auth_date = body
+                .auth_date
+                .ok_or_else(|| AppError::BadRequest("missing auth_date".into()))?;
+            let hash = body
+                .hash
+                .clone()
+                .ok_or_else(|| AppError::BadRequest("missing hash".into()))?;
+            let auth = TelegramAuthPayload {
+                id,
+                first_name: first_name.clone(),
+                last_name: body.last_name.clone(),
+                username: body.username.clone(),
+                photo_url: body.photo_url.clone(),
+                auth_date,
+                hash,
+            };
+            verify_telegram_login(&auth, bot_token)?;
+            let proof = serde_json::json!({
+                "type": "telegram_login",
+                "hash": body.hash,
+                "auth_date": auth_date,
+            });
+            (id, first_name, body.last_name.clone(), body.username.clone(), auth_date, proof)
+        };
 
-    let client_timestamp = DateTime::from_timestamp(body.auth_date, 0)
+    let client_timestamp = DateTime::from_timestamp(auth_date, 0)
         .ok_or_else(|| AppError::BadRequest("invalid auth_date".into()))?
         .with_timezone(&Utc);
 
-    let account_id = body.id.to_string();
-    let display = body.username.as_deref().map(|u| format!("@{u}"));
+    let account_id = user_id.to_string();
+    let display = username.as_deref().map(|u| format!("@{u}"));
 
     let prop = resolve_property(&state.pool, &body.property, state.config.allow_localhost_property).await?;
     let terms = if let Some(ref label) = body.version_label {
@@ -173,12 +218,6 @@ async fn telegram(
         &account_id,
         client_timestamp,
     );
-
-    let proof = serde_json::json!({
-        "type": "telegram_login",
-        "hash": body.hash,
-        "auth_date": body.auth_date,
-    });
 
     let row = submit_telegram(
         &state.pool,

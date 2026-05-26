@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "happy-dom": "^20.9.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.1.4"

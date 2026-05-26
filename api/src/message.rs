@@ -104,4 +104,22 @@ mod tests {
         assert!(msg.contains("Network: EVM"));
         assert!(msg.contains("Account: 0xabc"));
     }
+
+    #[test]
+    fn validate_timestamp_within_skew() {
+        validate_timestamp(Utc::now()).unwrap();
+    }
+
+    #[test]
+    fn validate_timestamp_rejects_large_skew() {
+        let old = Utc::now() - chrono::Duration::seconds(MAX_TIMESTAMP_SKEW_SECS + 1);
+        assert!(validate_timestamp(old).is_err());
+    }
+
+    #[test]
+    fn verify_message_matches_exact() {
+        let a = "same";
+        verify_message_matches(a, a).unwrap();
+        assert!(verify_message_matches(a, "other").is_err());
+    }
 }

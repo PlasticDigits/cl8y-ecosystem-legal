@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   appType: "spa",
   test: {
-    environment: "node",
+    environment: "happy-dom",
     include: ["src/**/*.test.ts"],
   },
   server: {

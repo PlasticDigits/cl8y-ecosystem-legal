@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cl8y_legal
+      POSTGRES_PASSWORD: cl8y_legal
+      POSTGRES_DB: cl8y_legal
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - cl8y_legal_pg:/var/lib/postgresql/data
+
+volumes:
+  cl8y_legal_pg:

@@ -147,7 +147,7 @@ Rate limits: per-IP (see `.env.example`).
 
 ## Tests
 
-Requires Postgres on `DATABASE_URL` (see `.env.example`).
+Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests also start the Rust API (`cargo run`) and publish terms via `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
 
 ```bash
 source "$HOME/.cargo/env"
@@ -155,9 +155,11 @@ cd api && cargo test
 
 cd web
 npm install
-npm test
-npm run test:e2e   # starts Vite dev server; Playwright uses 5 workers
+npm test              # Vitest unit tests (happy-dom)
+npm run test:e2e      # Playwright: API + Vite dev server, 5 workers; needs Postgres
 ```
+
+CI runs `test:web` (Vitest only) and `test:e2e` (Postgres service + full-stack Playwright) in [`.gitlab-ci.yml`](.gitlab-ci.yml).
 
 ## Secret scanning (Gitleaks)
 
@@ -169,6 +171,32 @@ gitleaks detect --source . --config .gitleaks.toml --verbose
 
 Never commit `.env` files (only [`.env.example`](.env.example) and [`web/.env.example`](web/.env.example)).
 
+## Telegram enforcement bot (`@cl8ytermsbot`)
+
+Rust bot in [`bot/`](bot/) for allowed supergroups only. It:
+
+- Leaves groups not listed in `ALLOWED_CHAT_USERNAMES` / `ALLOWED_CHAT_IDS` (see [`bot/groups.md`](bot/groups.md))
+- Tracks members who have not signed the latest terms (via the legal API)
+- Posts signing reminders every 6 hours (4× per day; `REMINDER_INTERVAL_HOURS`)
+- Kicks members who remain non-compliant after `GRACE_PERIOD_DAYS` (default 30)
+- On terms version change: announces in chat, attaches full terms as a `.txt` document, and resets compliance deadlines
+
+Users can sign via:
+
+1. **WebApp** — buttons in group reminders or DM `/start` menu
+2. **DM** — [t.me/cl8ytermsbot](https://t.me/cl8ytermsbot) → pick a group or **Sign all groups**
+
+Requires the same `TELEGRAM_BOT_TOKEN` as the API and `VITE_TELEGRAM_BOT_NAME=cl8ytermsbot` on the web build.
+
+```bash
+cp bot/.env.example bot/.env
+# Set ALLOWED_CHAT_USERNAMES, TELEGRAM_BOT_TOKEN, DATABASE_URL, LEGAL_* URLs
+
+cd bot && cargo run --release
+```
+
+Run the API first so migrations create `bot_chat_state` / `bot_member_compliance` tables.
+
 ## Configuration
 
-See [`.env.example`](.env.example).
+See [`.env.example`](.env.example) and [`bot/.env.example`](bot/.env.example).

@@ -7,6 +7,19 @@ export function requireProperty(): string | null {
   return p?.trim() || null;
 }
 
+/** Comma-separated chat ids for “sign all” from the bot DM. */
+export function getGroupProperties(): string[] {
+  const groups = getQueryParams().get("groups");
+  if (groups?.trim()) {
+    return groups
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  const single = requireProperty();
+  return single ? [single] : [];
+}
+
 export function getRedirectUri(): string | null {
   return getQueryParams().get("redirect_uri");
 }

@@ -13,4 +13,19 @@ test.describe("sign pages require property", () => {
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
     await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeVisible();
   });
+
+  for (const path of ["/sign/solana", "/sign/terra-classic"]) {
+    test(`${path} shows property and sign button when set`, async ({ page }) => {
+      await page.goto(`${path}?property=cl8y.com`);
+      await expect(page.getByText("Property: cl8y.com")).toBeVisible();
+      await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeVisible();
+    });
+  }
+
+  test("/sign/telegram shows channel property when set", async ({ page }) => {
+    await page.goto("/sign/telegram?property=-1001234567890");
+    await expect(
+      page.getByText(/not configured|Channel property: -1001234567890|Property:/i),
+    ).toBeVisible();
+  });
 });

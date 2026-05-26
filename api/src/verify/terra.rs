@@ -50,3 +50,40 @@ pub fn verify_terra(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    use k256::ecdsa::{signature::Signer, SigningKey};
+
+    #[test]
+    fn roundtrip_terra_sign_verify() {
+        let sk = SigningKey::from_bytes((&[0x33u8; 32]).into()).expect("key");
+        let vk = k256::ecdsa::VerifyingKey::from(&sk);
+        let compressed = vk.to_encoded_point(true);
+        let address = cosmos_address_from_pubkey(compressed.as_bytes(), "terra").unwrap();
+        let message = "CL8Y Terra test";
+        let sig: k256::ecdsa::Signature = sk.sign(message.as_bytes());
+        let sig_b64 = STANDARD.encode(sig.to_bytes());
+        let pubkey_b64 = STANDARD.encode(compressed.as_bytes());
+        verify_terra(&address, message, &sig_b64, &pubkey_b64).unwrap();
+    }
+
+    #[test]
+    fn rejects_address_pubkey_mismatch() {
+        let sk = SigningKey::from_bytes((&[0x44u8; 32]).into()).expect("key");
+        let vk = k256::ecdsa::VerifyingKey::from(&sk);
+        let compressed = vk.to_encoded_point(true);
+        let address = cosmos_address_from_pubkey(compressed.as_bytes(), "terra").unwrap();
+        let other_sk = SigningKey::from_bytes((&[0x55u8; 32]).into()).expect("key");
+        let other_vk = k256::ecdsa::VerifyingKey::from(&other_sk);
+        let other_compressed = other_vk.to_encoded_point(true);
+        let message = "msg";
+        let sig: k256::ecdsa::Signature = sk.sign(message.as_bytes());
+        let sig_b64 = STANDARD.encode(sig.to_bytes());
+        let wrong_pubkey_b64 = STANDARD.encode(other_compressed.as_bytes());
+        let err = verify_terra(&address, message, &sig_b64, &wrong_pubkey_b64).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(_)));
+    }
+}

@@ -98,3 +98,17 @@ pub async fn rate_limit_middleware(
     state.check(ip, is_write)?;
     Ok(next.run(req).await)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    #[test]
+    fn update_terms_allows_one_per_second() {
+        let state = RateLimitState::new(60, 10);
+        let ip = IpAddr::V4(Ipv4Addr::new(203, 0, 113, 1));
+        state.check_update_terms(ip).unwrap();
+        assert!(state.check_update_terms(ip).is_err());
+    }
+}
