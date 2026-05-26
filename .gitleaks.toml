@@ -1,0 +1,36 @@
+# Gitleaks config for cl8y-ecosystem-legal
+# https://github.com/gitleaks/gitleaks
+
+title = "cl8y-ecosystem-legal"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Safe paths, examples, tests, and documented dev-only values"
+
+paths = [
+  '''(?i)\.env\.example$''',
+  '''(?i)terms_and_conditions\.txt$''',
+  '''(?i)^\.gitlab-ci\.yml$''',
+  '''(?i)^README\.md$''',
+  '''terms\.cl8y\.com''',
+  '''api\.terms\.cl8y\.com''',
+  '''(?i)^api/tests/''',
+  '''(?i)^api/src/telegram\.rs$''',
+]
+
+# Placeholders and local-dev fixtures (not production secrets)
+regexes = [
+  '''change-me-admin-token''',
+  '''dev-admin-token''',
+  '''test-admin''',
+  '''123456:ABC-DEF''',
+  '''123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11''',
+  '''postgres://cl8y_legal:cl8y_legal@''',
+  '''cl8y_legal:cl8y_legal''',
+  '''your_bot_username''',
+]
+
+# Optional: ignore specific finding fingerprints after `gitleaks detect` reports them
+# commits = []

@@ -1,0 +1,52 @@
+[package]
+name = "cl8y-legal-api"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "cl8y_legal_api"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cl8y-legal-api"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+axum = { version = "0.8", features = ["macros"] }
+bs58 = "0.5"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "6"
+dotenvy = "0.15"
+ed25519-dalek = "2"
+governor = "0.8"
+hex = "0.4"
+hmac = "0.12"
+k256 = { version = "0.13", features = ["ecdsa"] }
+nonzero_ext = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sha3 = "0.10"
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json", "migrate"] }
+subtle = "2"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "fs", "set-header", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+bech32 = "0.9"
+ripemd = "0.1"
+base64 = "0.22"
+urlencoding = "2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+[dev-dependencies]
+http-body-util = "0.1"
+hyper = "1"
+hex = "0.4"
+k256 = { version = "0.13", features = ["ecdsa"] }
+sha3 = "0.10"
+tower = { version = "0.5", features = ["util"] }
