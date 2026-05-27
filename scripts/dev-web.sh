@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT/web"
+cd "$ROOT"
 
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 if [[ -s "$NVM_DIR/nvm.sh" ]]; then
@@ -9,7 +9,9 @@ if [[ -s "$NVM_DIR/nvm.sh" ]]; then
   source "$NVM_DIR/nvm.sh"
 fi
 
-[[ -f .env ]] || cp .env.example .env 2>/dev/null || true
+[[ -f web/.env ]] || cp web/.env.example web/.env 2>/dev/null || true
 
 npm install
+npm run build:sdk
+cd web
 exec npm run dev

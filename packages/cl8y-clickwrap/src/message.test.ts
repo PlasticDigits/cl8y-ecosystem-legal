@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAcceptanceMessage, buildWalletMessage, formatEffectiveDate } from "./message";
+import { buildAcceptanceMessage, buildWalletMessage, formatEffectiveDate } from "./message.js";
 
 describe("acceptance message", () => {
   it("formats effective date", () => {

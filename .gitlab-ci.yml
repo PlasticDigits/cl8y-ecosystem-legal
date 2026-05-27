@@ -58,13 +58,20 @@ test:rust:
   script:
     - cargo test
 
+test:clickwrap:
+  stage: test
+  image: node:22-bookworm
+  script:
+    - npm ci
+    - npm run test:sdk
+
 test:web:
   stage: test
   image: node:22-bookworm
   script:
-    - cd web
     - npm ci
-    - npm run test
+    - npm run build:sdk
+    - npm run test:web
 
 test:e2e:
   extends: .rust
@@ -93,9 +100,11 @@ test:e2e:
     - cd api
   script:
     - cargo build
-    - cd ../web
+    - cd ..
     - npm ci
-    - npm test
+    - npm run build:sdk
+    - npm run test:web
+    - cd web
     - npx playwright install --with-deps chromium
     - npm run test:e2e
 
@@ -119,11 +128,21 @@ build:bot:
       - bot/target/release/cl8y-terms-bot
     expire_in: 1 week
 
+build:clickwrap:
+  stage: build
+  image: node:22-bookworm
+  script:
+    - npm ci
+    - npm run build:sdk
+  artifacts:
+    paths:
+      - packages/cl8y-clickwrap/dist/
+    expire_in: 1 week
+
 build:web:
   stage: build
   image: node:22-bookworm
   script:
-    - cd web
     - npm ci
     - npm run build
   artifacts:

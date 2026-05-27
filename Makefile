@@ -10,7 +10,7 @@ test-api:
 	@bash -c 'source "$$HOME/.cargo/env" 2>/dev/null; cd api && cargo test'
 
 test-web:
-	@cd web && npm install && npm test
+	@npm install && npm run build:sdk && npm run test:web
 
 test: test-api test-web
 

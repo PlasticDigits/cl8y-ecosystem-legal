@@ -1,0 +1,16 @@
+{
+  "name": "cl8y-ecosystem-legal",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "web"
+  ],
+  "scripts": {
+    "build:sdk": "npm run build -w @plasticdigits/cl8y-clickwrap",
+    "test:sdk": "npm run test -w @plasticdigits/cl8y-clickwrap",
+    "build:web": "npm run build -w cl8y-legal-web",
+    "test:web": "npm run test -w cl8y-legal-web",
+    "build": "npm run build:sdk && npm run build:web",
+    "test": "npm run test:sdk && npm run test:web"
+  }
+}

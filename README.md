@@ -36,10 +36,11 @@ Signing on `cl8y.com` does not satisfy `yieldomega.com`. A version bump requires
 
 ```bash
 # Build static site for terms.cl8y.com
-cd web && npm ci && VITE_API_BASE_URL=https://api.terms.cl8y.com npm run build
+npm ci
+VITE_API_BASE_URL=https://api.terms.cl8y.com npm run build
 
 # Run API behind reverse proxy → api.terms.cl8y.com
-cd ../api && cargo run --release
+cd api && cargo run --release
 ```
 
 ## Quick start (local)
@@ -86,10 +87,12 @@ Runs on http://localhost:8080 by default. On first start, syncs terms from GitLa
 In a second terminal:
 
 ```bash
-cd web
 npm install
-npm run dev
+npm run build:sdk
+cd web && npm run dev
 ```
+
+Or from the repo root: `make web`
 
 UI: http://localhost:5173 (proxies `/api` to the API).
 
@@ -98,8 +101,8 @@ UI: http://localhost:5173 (proxies `/api` to the API).
 Build the frontend and serve it from the API:
 
 ```bash
-cd web && npm run build
-cd ../api
+npm run build
+cd api
 STATIC_DIR=../web/dist cargo run
 ```
 
@@ -145,6 +148,16 @@ Rate limits: per-IP (see `.env.example`).
 3. If `signed_latest` is false, send user to `sign_urls.evm` (or telegram/solana/terra)
 4. After sign, poll until `signed_latest` is true
 
+### Clickwrap SDK
+
+For JavaScript/TypeScript sites, use [`@plasticdigits/cl8y-clickwrap`](packages/cl8y-clickwrap/README.md):
+
+```bash
+npm install @plasticdigits/cl8y-clickwrap
+```
+
+The package provides an API client, URL/poll helpers, and React components (`TermsGate`, `useSignatureStatus`) that implement the integrator flow above.
+
 ## Tests
 
 Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests also start the Rust API (`cargo run`) and publish terms via `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
@@ -153,13 +166,13 @@ Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests also 
 source "$HOME/.cargo/env"
 cd api && cargo test
 
-cd web
-npm install
-npm test              # Vitest unit tests (happy-dom)
-npm run test:e2e      # Playwright: API + Vite dev server, 5 workers; needs Postgres
+npm install          # root workspaces (SDK + web)
+npm run test:sdk     # clickwrap SDK unit tests
+npm run test:web     # portal unit tests (builds SDK first via workspace)
+cd web && npm run test:e2e   # Playwright: API + Vite dev server; needs Postgres
 ```
 
-CI runs `test:web` (Vitest only) and `test:e2e` (Postgres service + full-stack Playwright) in [`.gitlab-ci.yml`](.gitlab-ci.yml).
+CI runs `test:clickwrap`, `test:web` (Vitest only), and `test:e2e` (Postgres service + full-stack Playwright) in [`.gitlab-ci.yml`](.gitlab-ci.yml).
 
 ## Secret scanning (Gitleaks)
 

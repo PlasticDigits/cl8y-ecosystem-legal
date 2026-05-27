@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prebuild": "npm run build -w @plasticdigits/cl8y-clickwrap",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
@@ -11,6 +12,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@plasticdigits/cl8y-clickwrap": "*",
     "viem": "^2.30.0"
   },
   "devDependencies": {
