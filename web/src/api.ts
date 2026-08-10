@@ -11,6 +11,11 @@ export function getTermsLatest(property: string) {
   return client.getTermsLatest(property);
 }
 
+/** Plain-text body of the latest published terms for a property (fetched once per sign-page load). */
+export function getTermsContent(property: string) {
+  return client.getTermsContent(property);
+}
+
 export function getStatus(property: string, network: string, account: string) {
   return client.getSignatureStatus(property, network, account);
 }

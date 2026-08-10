@@ -12,5 +12,8 @@
     "test:web": "npm run test -w cl8y-legal-web",
     "build": "npm run build:sdk && npm run build:web",
     "test": "npm run test:sdk && npm run test:web"
+  },
+  "overrides": {
+    "ox": "0.14.26"
   }
 }

@@ -166,14 +166,24 @@ Rate limits: per-IP (see `.env.example`).
 
 Network id: `TERRA_CLASSIC`. Portal chain: Terra Classic **`columbus-5`** (not Terra 2.0).
 
-- Users sign via Keplr **`signArbitrary(chainId, signerAddress, data)`** (ADR-036). The canonical CL8Y acceptance string is the `data` payload; Keplr wraps it as amino `sign/MsgSignData`.
-- Portal **canonicalizes** the Keplr bech32 address to lowercase before building the message and calling `signArbitrary` (mixed case is rejected). The API likewise normalizes via bech32 decode/re-encode.
-- `POST /api/v1/signatures/wallet` requires base64 **signature** + compressed secp256k1 **pubkey** (`pub_key.value`). The API verifies the ADR-036 digest (CosmJS-compatible), not raw message bytes, and checks pubkey → `terra1…` address binding. JSON bodies are capped at **64 KiB**.
-- Integrators should send users to `sign_urls.terra` / `/sign/terra-classic?property=…` rather than embedding Keplr themselves unless they preserve the same ADR-036 envelope.
-- Agent / contributor invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md). Gap tracking: [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md).
+The portal calls Keplr `signArbitrary(columbus-5, signer, data)`. The API verifies CosmJS-compatible ADR-036 amino `sign/MsgSignData` digests and binds the compressed secp256k1 pubkey to the claimed `terra1…` bech32 address (checksummed; not prefix-only).
+
+- Crypto invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
+- Playwright: mocked Keplr in `web/e2e/terra-sign.spec.ts` (see `web/e2e/helpers/keplr-wallet.ts`)
 - Verify locally: `cd api && cargo test --lib terra && cargo test --test integration_test terra` and `cd web && npm run test:e2e -- terra-sign` (Playwright workers=5 via `playwright.config.ts`).
 
 **Migration note:** There is no dual-verify for the previous incorrect raw-ECDSA server path — that path never matched production Keplr, so stored Terra proofs (if any) from the broken verifier are not accepted.
+
+## Portal sign UX (EVM / Terra Classic)
+
+EVM and Terra Classic sign pages share [`web/src/signShell.ts`](web/src/signShell.ts):
+
+1. On load, fetch latest terms metadata + full content for the `property`.
+2. Show version label, effective date, and scrollable terms body (text nodes only — no `innerHTML`).
+3. **Consent gate:** Connect & sign stays disabled until terms load successfully **and** the user checks *I have read and agree to the Terms & Conditions* (checkbox only; not scroll-to-bottom).
+4. After wallet connect, if the account already has `signed_latest`, show success without forcing a re-sign.
+
+Solana and Telegram sign pages are unchanged for now (see GitLab issue #2). Agent/integrator notes: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md). Related gap analysis: [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md).
 
 ## Integrator flow
 

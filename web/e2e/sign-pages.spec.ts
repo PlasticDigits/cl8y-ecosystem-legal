@@ -1,5 +1,20 @@
 import { test, expect } from "@playwright/test";
 
+async function expectTermsDisclosure(page: import("@playwright/test").Page) {
+  await expect(page.getByRole("heading", { name: "Terms & Conditions" })).toBeVisible();
+  const body = page.locator(".terms-body");
+  await expect(body).toContainText(/CL8Y ECOSYSTEM TERMS AND CONDITIONS/i, { timeout: 30_000 });
+  await expect(page.locator(".terms-meta")).toContainText(/Version/i);
+  await expect(page.locator(".terms-meta")).toContainText(/Effective/i);
+  const text = await body.innerText();
+  expect(text.length).toBeGreaterThan(100);
+
+  const btn = page.getByRole("button", { name: /Connect & sign/i });
+  await expect(btn).toBeDisabled();
+  await page.getByLabel(/I have read and agree to the Terms & Conditions/i).check();
+  await expect(btn).toBeEnabled();
+}
+
 test.describe("sign pages require property", () => {
   for (const path of ["/sign/evm", "/sign/solana", "/sign/terra-classic", "/sign/telegram"]) {
     test(`${path} shows error without property`, async ({ page }) => {
@@ -8,19 +23,25 @@ test.describe("sign pages require property", () => {
     });
   }
 
-  test("/sign/evm shows property when set", async ({ page }) => {
+  test("/sign/evm shows property, terms, and consent gate when set", async ({ page }) => {
     await page.goto("/sign/evm?property=cl8y.com");
+    await expect(page.getByText("Property: cl8y.com")).toBeVisible();
+    await expectTermsDisclosure(page);
+  });
+
+  test("/sign/terra-classic shows property, terms, and consent gate when set", async ({ page }) => {
+    await page.goto("/sign/terra-classic?property=cl8y.com");
+    await expect(page.getByText("Property: cl8y.com")).toBeVisible();
+    await expectTermsDisclosure(page);
+  });
+
+  test("/sign/solana shows property and sign button when set (terms disclosure postponed)", async ({
+    page,
+  }) => {
+    await page.goto("/sign/solana?property=cl8y.com");
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
     await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeVisible();
   });
-
-  for (const path of ["/sign/solana", "/sign/terra-classic"]) {
-    test(`${path} shows property and sign button when set`, async ({ page }) => {
-      await page.goto(`${path}?property=cl8y.com`);
-      await expect(page.getByText("Property: cl8y.com")).toBeVisible();
-      await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeVisible();
-    });
-  }
 
   test("/sign/telegram shows channel property when set", async ({ page }) => {
     await page.goto("/sign/telegram?property=-1001234567890");

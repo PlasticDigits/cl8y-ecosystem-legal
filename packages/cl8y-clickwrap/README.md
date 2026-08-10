@@ -49,6 +49,8 @@ export function App() {
 
 `TermsGate` polls signature status, shows an accept UI when unsigned, and renders children once `signed_latest` is true. After the user returns from the signing portal, status is re-checked on window focus.
 
+The hosted portal (`/sign/evm`, `/sign/terra-classic`) shows the **full terms text on-page** with an explicit consent checkbox before wallet connect — see [`skills/portal-sign-disclosure/SKILL.md`](../../skills/portal-sign-disclosure/SKILL.md) and GitLab issue #2. `TermsGate` still links to `GET /api/v1/terms/latest/content` for integrators embedding the gate off-portal.
+
 ## Headless usage
 
 ```ts
