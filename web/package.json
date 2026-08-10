@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@plasticdigits/cl8y-clickwrap": "*",
-    "viem": "^2.30.0"
+    "viem": "^2.55.11"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

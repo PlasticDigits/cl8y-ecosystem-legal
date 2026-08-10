@@ -3,21 +3,32 @@ import { buildWalletMessage } from "../message";
 import { getAppName, getRedirectUri, requireProperty } from "../query";
 import { el, renderMissingProperty, renderSuccess } from "../ui";
 
+/** Terra Classic mainnet — do not retarget to Terra 2.0 without an explicit product change. */
 const TERRA_CHAIN_ID = "columbus-5";
 
-interface KeplrOfflineSigner {
-  getAccounts: () => Promise<{ address: string; pubkey: Uint8Array }[]>;
-  signArbitrary: (
-    signerAddress: string,
-    data: string,
-  ) => Promise<{ signature: string; pub_key: { type: string; value: string } }>;
+interface KeplrKey {
+  bech32Address: string;
+}
+
+interface KeplrArbitrarySignature {
+  signature: string;
+  pub_key: { type: string; value: string };
 }
 
 declare global {
   interface Window {
     keplr?: {
       enable: (chainId: string) => Promise<void>;
-      getOfflineSigner: (chainId: string) => KeplrOfflineSigner;
+      getKey: (chainId: string) => Promise<KeplrKey>;
+      /**
+       * ADR-036 `signArbitrary` — not OfflineSigner.signArbitrary(address, data).
+       * @see https://docs.keplr.app/api/guide/sign-arbitrary
+       */
+      signArbitrary: (
+        chainId: string,
+        signerAddress: string,
+        data: string | Uint8Array,
+      ) => Promise<KeplrArbitrarySignature>;
     };
   }
 }
@@ -46,8 +57,8 @@ export async function renderTerra(root: HTMLElement) {
     try {
       if (!window.keplr) throw new Error("Keplr extension not found");
       await window.keplr.enable(TERRA_CHAIN_ID);
-      const signer = window.keplr.getOfflineSigner(TERRA_CHAIN_ID);
-      const [account] = await signer.getAccounts();
+      const key = await window.keplr.getKey(TERRA_CHAIN_ID);
+      const accountId = key.bech32Address;
       const terms = await getTermsLatest(property);
       const clientTimestamp = new Date();
       const message = buildWalletMessage({
@@ -55,15 +66,16 @@ export async function renderTerra(root: HTMLElement) {
         effectiveDate: terms.effective_date,
         property: terms.property,
         network: "TERRA_CLASSIC",
-        accountId: account.address,
+        accountId,
         clientTimestamp,
       });
       statusEl.textContent = "Confirm signature in Keplr…";
-      const result = await signer.signArbitrary(account.address, message);
+      // Keplr wraps `message` as ADR-036 MsgSignData; API verifies the same envelope.
+      const result = await window.keplr.signArbitrary(TERRA_CHAIN_ID, accountId, message);
       await submitWallet({
         property,
         network: "TERRA_CLASSIC",
-        account_id: account.address,
+        account_id: accountId,
         message,
         signature: result.signature,
         pubkey: result.pub_key.value,

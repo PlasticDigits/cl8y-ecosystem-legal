@@ -9,7 +9,7 @@ use crate::error::{AppError, AppResult};
 
 pub use evm::verify_evm;
 pub use solana::verify_solana;
-pub use terra::verify_terra;
+pub use terra::{adr036_sign_doc_bytes, verify_terra};
 
 #[derive(Debug, Deserialize)]
 pub struct WalletProof {

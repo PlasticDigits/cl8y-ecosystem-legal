@@ -1,4 +1,29 @@
+use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+
 use crate::error::{AppError, AppResult};
+
+const TERRA_ACCOUNT_HRP: &str = "terra";
+const TERRA_ADDRESS_BYTES: usize = 20;
+
+fn normalize_terra_classic_address(account: &str) -> AppResult<String> {
+    let (hrp, data, variant) = decode(account)
+        .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))?;
+    if hrp != TERRA_ACCOUNT_HRP || variant != Variant::Bech32 {
+        return Err(AppError::BadRequest(
+            "invalid Terra Classic address".into(),
+        ));
+    }
+    let bytes = Vec::<u8>::from_base32(&data)
+        .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))?;
+    if bytes.len() != TERRA_ADDRESS_BYTES {
+        return Err(AppError::BadRequest(
+            "invalid Terra Classic address length".into(),
+        ));
+    }
+    // Canonical lowercase bech32 (reject mixed-case by re-encoding).
+    encode(TERRA_ACCOUNT_HRP, bytes.to_base32(), Variant::Bech32)
+        .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))
+}
 
 pub fn normalize_account(network: &str, account: &str) -> AppResult<String> {
     let network = network.trim().to_uppercase();
@@ -24,12 +49,7 @@ pub fn normalize_account(network: &str, account: &str) -> AppResult<String> {
             }
             Ok(account.to_string())
         }
-        "TERRA_CLASSIC" => {
-            if !account.starts_with("terra") {
-                return Err(AppError::BadRequest("invalid Terra Classic address".into()));
-            }
-            Ok(account.to_string())
-        }
+        "TERRA_CLASSIC" => normalize_terra_classic_address(account),
         "TELEGRAM" => {
             if !account.chars().all(|c| c.is_ascii_digit()) {
                 return Err(AppError::BadRequest("invalid Telegram user id".into()));
@@ -37,5 +57,35 @@ pub fn normalize_account(network: &str, account: &str) -> AppResult<String> {
             Ok(account.to_string())
         }
         _ => Err(AppError::BadRequest(format!("unsupported network: {network}"))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn terra_accepts_valid_bech32() {
+        let addr = "terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt";
+        assert_eq!(normalize_account("TERRA_CLASSIC", addr).unwrap(), addr);
+    }
+
+    #[test]
+    fn terra_rejects_prefix_only_and_bad_checksum() {
+        assert!(matches!(
+            normalize_account("TERRA_CLASSIC", "terra1notavalidaddress"),
+            Err(AppError::BadRequest(_))
+        ));
+        assert!(matches!(
+            normalize_account("TERRA_CLASSIC", "terra"),
+            Err(AppError::BadRequest(_))
+        ));
+        assert!(matches!(
+            normalize_account(
+                "TERRA_CLASSIC",
+                "cosmos180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt"
+            ),
+            Err(AppError::BadRequest(_))
+        ));
     }
 }

@@ -137,9 +137,20 @@ All acceptance endpoints require `property` (hostname or Telegram `chat_id`).
 | POST | `/api/v1/signatures/wallet` |
 | POST | `/api/v1/signatures/telegram` |
 
-Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`, `/sign/telegram?property=-100…`
+Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`, `/sign/terra-classic?property=cl8y.com`, `/sign/telegram?property=-100…`
 
 Rate limits: per-IP (see `.env.example`).
+
+### Terra Classic (Keplr)
+
+Network id: `TERRA_CLASSIC`. Portal chain: Terra Classic **`columbus-5`** (not Terra 2.0).
+
+- Users sign via Keplr **`signArbitrary(chainId, signerAddress, data)`** (ADR-036). The canonical CL8Y acceptance string is the `data` payload; Keplr wraps it as amino `sign/MsgSignData`.
+- `POST /api/v1/signatures/wallet` requires base64 **signature** + compressed secp256k1 **pubkey** (`pub_key.value`). The API verifies the ADR-036 digest (CosmJS-compatible), not raw message bytes, and checks pubkey → `terra1…` address binding.
+- Integrators should send users to `sign_urls.terra` / `/sign/terra-classic?property=…` rather than embedding Keplr themselves unless they preserve the same ADR-036 envelope.
+- Agent / contributor invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md). Gap tracking: [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md).
+
+**Migration note:** There is no dual-verify for the previous incorrect raw-ECDSA server path — that path never matched production Keplr, so stored Terra proofs (if any) from the broken verifier are not accepted.
 
 ## Integrator flow
 
