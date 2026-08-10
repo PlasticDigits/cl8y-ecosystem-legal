@@ -67,9 +67,13 @@ cp .env.example .env
 # For local dev, override production defaults in .env:
 #   LEGAL_PUBLIC_BASE_URL=http://localhost:8080
 #   CORS_ORIGINS=http://localhost:5173,http://localhost:8080
+#   ADMIN_TOKEN=<strong-local-secret>   # required (or ALLOW_INSECURE_DEFAULTS=true)
 
 cp web/.env.example web/.env
 # For local dev: VITE_API_BASE_URL=  (empty — Vite proxies /api)
+# Optional redirects after Accept:
+#   VITE_REDIRECT_URI_ALLOWLIST=https://cl8y.com
+#   VITE_ALLOW_LOCALHOST_REDIRECT=true
 ```
 
 ### 3. API (Rust)
@@ -112,16 +116,33 @@ Then open http://localhost:8080.
 
 The API loads terms from the GitLab raw file on `main` ([`TERMS_AND_CONDITIONS.txt`](https://gitlab.com/PlasticDigits/cl8y-ecosystem-legal/-/raw/main/TERMS_AND_CONDITIONS.txt)). It compares **line 2** (`Version: …`) to the current latest version and publishes only when that version changes.
 
-- **On startup** (if `TERMS_SYNC_ON_STARTUP=true`)
-- **Every 4 hours** (`TERMS_SYNC_INTERVAL_HOURS`, default `4`)
-- **On demand:** `POST` or `GET` `/update_terms` (public, rate-limited to **1 request per second per IP**)
+- **On startup** (if `TERMS_SYNC_ON_STARTUP=true`) — primary unattended path
+- **Every 4 hours** (`TERMS_SYNC_INTERVAL_HOURS`, default `4`) — primary unattended path
+- **On demand (ops):** `POST /update_terms` with `Authorization: Bearer <ADMIN_TOKEN>` (same token as `/admin/*`; rate-limited to **1 request per second per IP**). Unauthenticated calls return **401**. Prefer this over inventing a second token scheme.
 
 ```bash
-curl -X POST https://api.terms.cl8y.com/update_terms
-# Local: curl -X POST http://localhost:8080/update_terms
+curl -X POST https://api.terms.cl8y.com/update_terms \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+# Local: curl -X POST http://localhost:8080/update_terms -H "Authorization: Bearer $ADMIN_TOKEN"
 # {"status":"unchanged","version_label":"Draft 1.3"}
 # or {"status":"published","version_label":"Draft 1.4",...}
 ```
+
+Liveness: `GET /health` → `{"status":"ok"}` (no auth; safe for load balancers / Playwright readiness).
+
+### Security ops invariants
+
+Documented for operators and agents in [`skills/security-ops/SKILL.md`](skills/security-ops/SKILL.md):
+
+| Control | Behavior |
+|---------|----------|
+| `ADMIN_TOKEN` | Required at boot. Refuses known default `dev-admin-token` unless `ALLOW_INSECURE_DEFAULTS=true` (local/CI only). |
+| `/update_terms` | Bearer admin auth; POST-only. |
+| Admin Bearer compare | Constant-time (`subtle`). |
+| `redirect_uri` | Portal allowlists origins via `VITE_REDIRECT_URI_ALLOWLIST` (+ optional localhost). Unsafe URIs never auto-navigate. |
+| Rate-limit IP | TCP peer by default. `TRUSTED_PROXY_CIDRS` enables XFF; **rightmost** valid hop is used. |
+
+Gap analysis items 4–7 (portal/API ops) in [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md) track this hardening.
 
 ## Public API
 
@@ -173,7 +194,7 @@ The package provides an API client, URL/poll helpers, and React components (`Ter
 
 ## Tests
 
-Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests also start the Rust API (`cargo run`) and publish terms via `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
+Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests start the Rust API with `ADMIN_TOKEN=test-admin` and publish terms via authenticated `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
 
 ```bash
 source "$HOME/.cargo/env"

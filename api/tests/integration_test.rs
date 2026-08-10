@@ -22,11 +22,13 @@ fn test_config(database_url: &str) -> Config {
         terms_sync_interval_hours: 4,
         terms_sync_on_startup: false,
         admin_token: "test-admin".into(),
+        allow_insecure_defaults: false,
         telegram_bot_token: Some("123456:ABC-DEF".into()),
         rate_limit_read: 1000,
         rate_limit_write: 1000,
         cors_origins: vec!["*".into()],
         allow_localhost_property: true,
+        trusted_proxy_cidrs: vec![],
         static_dir: None,
     }
 }
@@ -508,4 +510,84 @@ async fn integration_terra_classic_adr036_rejects_abuse() {
     )
     .await;
     assert_eq!(skew, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn integration_update_terms_requires_admin_bearer() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_update_terms_requires_admin_bearer: {e}");
+            return;
+        }
+    };
+    let app = build_app(state);
+
+    let unauth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/update_terms")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unauth.status(), StatusCode::UNAUTHORIZED);
+
+    let bad = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/update_terms")
+                .header("authorization", "Bearer wrong")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(bad.status(), StatusCode::UNAUTHORIZED);
+
+    let health = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(health.status(), StatusCode::OK);
+
+    let admin_unauth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/admin/properties")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(admin_unauth.status(), StatusCode::UNAUTHORIZED);
+
+    let admin_ok = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin/properties")
+                .header("authorization", "Bearer test-admin")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(admin_ok.status(), StatusCode::OK);
 }

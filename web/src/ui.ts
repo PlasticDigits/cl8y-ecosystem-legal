@@ -1,3 +1,5 @@
+import { safeRedirectUri } from "./redirect";
+
 export function el(tag: string, attrs: Record<string, string> = {}, children: (Node | string)[] = []): HTMLElement {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -22,16 +24,21 @@ export function renderMissingProperty(root: HTMLElement) {
   );
 }
 
+/**
+ * Render acceptance success. Only navigates when `redirectUri` passes the portal allowlist;
+ * unsafe URIs still show success without auto-redirect or Continue link.
+ */
 export function renderSuccess(root: HTMLElement, version: string, redirectUri: string | null) {
   root.replaceChildren(
     el("h1", {}, ["Accepted"]),
     el("p", { className: "success" }, [`You have accepted Terms & Conditions ${version} for this property.`]),
   );
-  if (redirectUri) {
-    const link = el("a", { className: "button", href: redirectUri }, ["Continue"]);
+  const safe = safeRedirectUri(redirectUri);
+  if (safe) {
+    const link = el("a", { className: "button", href: safe }, ["Continue"]);
     root.append(el("p", {}, [link]));
     setTimeout(() => {
-      window.location.href = redirectUri;
+      window.location.href = safe;
     }, 2000);
   }
 }

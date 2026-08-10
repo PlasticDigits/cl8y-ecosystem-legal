@@ -55,6 +55,7 @@ export function App() {
 import {
   buildSignUrl,
   createClient,
+  isAllowedRedirectUri,
   pollUntilSigned,
 } from "@plasticdigits/cl8y-clickwrap";
 
@@ -63,8 +64,13 @@ const client = createClient();
 const status = await client.getSignatureStatus("cl8y.com", "EVM", address);
 if (!status.signed_latest) {
   const terms = await client.getTermsLatest("cl8y.com");
+  const redirectUri = window.location.href;
+  // Portal enforces VITE_REDIRECT_URI_ALLOWLIST; preflight locally if you want fail-fast UX.
+  if (!isAllowedRedirectUri(redirectUri, { allowlist: ["https://cl8y.com"], allowLocalhost: true })) {
+    throw new Error("redirect_uri is not allowlisted on the signing portal");
+  }
   window.location.href = buildSignUrl(terms.sign_urls.evm, {
-    redirectUri: window.location.href,
+    redirectUri,
     appName: "My Dapp",
   });
 }
@@ -104,6 +110,17 @@ await client.submitTelegram({ /* … */ });
 | `Telegram`      | `TELEGRAM`       | `telegram`       |
 
 Terra Classic signing on the hosted portal uses Keplr ADR-036 (`columbus-5`). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify. Crypto invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
+
+## Redirect URI safety
+
+The hosted portal (`terms.cl8y.com`) only auto-navigates to `redirect_uri` values whose **origin** is on `VITE_REDIRECT_URI_ALLOWLIST` (HTTPS), or loopback when `VITE_ALLOW_LOCALHOST_REDIRECT` is enabled. See root [`skills/security-ops/SKILL.md`](../../skills/security-ops/SKILL.md).
+
+SDK helpers (optional for integrators; portal still enforces):
+
+- `sanitizeRedirectUri(uri, { allowlist, allowLocalhost })` → safe URL or `null`
+- `isAllowedRedirectUri(uri, opts)` → boolean
+
+`buildSignUrl` / `appendSignParams` still pass through `redirectUri` unchanged so server-side integrators with known-good URLs are not broken.
 
 ## React exports
 

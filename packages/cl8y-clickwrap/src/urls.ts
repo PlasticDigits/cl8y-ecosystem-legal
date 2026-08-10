@@ -1,6 +1,11 @@
 import type { SignUrls } from "./types.js";
 
 export interface SignUrlOptions {
+  /**
+   * Return URL after successful acceptance.
+   * Hosts must pass an origin allowlisted by the portal (`VITE_REDIRECT_URI_ALLOWLIST`);
+   * use {@link sanitizeRedirectUri} / {@link isAllowedRedirectUri} to preflight.
+   */
   redirectUri?: string;
   appName?: string;
 }

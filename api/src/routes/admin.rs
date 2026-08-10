@@ -1,12 +1,13 @@
 use axum::{
     extract::{Path, State},
-    http::{header::AUTHORIZATION, HeaderMap},
+    http::HeaderMap,
     routing::{delete, get},
     Json, Router,
 };
 use serde::Serialize;
 
 use crate::{
+    auth::require_admin,
     error::{AppError, AppResult},
     property::{normalize_property, PropertyKind},
     AppState,
@@ -16,19 +17,6 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/properties", get(list_properties))
         .route("/properties/{kind}/{identifier}", delete(delete_property))
-}
-
-fn require_admin(headers: &HeaderMap, state: &AppState) -> AppResult<()> {
-    let token = headers
-        .get(AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| v.strip_prefix("Bearer "))
-        .unwrap_or("");
-
-    if token != state.config.admin_token {
-        return Err(AppError::Unauthorized);
-    }
-    Ok(())
 }
 
 #[derive(Debug, Serialize)]
@@ -43,7 +31,7 @@ async fn list_properties(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> AppResult<Json<Vec<PropertyListItem>>> {
-    require_admin(&headers, &state)?;
+    require_admin(&headers, &state.config.admin_token)?;
     let rows = sqlx::query_as::<_, (PropertyKind, String, Option<String>, chrono::DateTime<chrono::Utc>)>(
         "SELECT kind, identifier, display_name, created_at FROM properties ORDER BY created_at DESC",
     )
@@ -72,7 +60,7 @@ async fn delete_property(
     headers: HeaderMap,
     Path((kind, identifier)): Path<(String, String)>,
 ) -> AppResult<Json<serde_json::Value>> {
-    require_admin(&headers, &state)?;
+    require_admin(&headers, &state.config.admin_token)?;
     let kind = match kind.as_str() {
         "website" => PropertyKind::Website,
         "telegram_channel" => PropertyKind::TelegramChannel,
