@@ -17,7 +17,11 @@ pub async fn get_last_known_version(pool: &PgPool, chat_id: i64) -> anyhow::Resu
     Ok(row.and_then(|r| r.0))
 }
 
-pub async fn set_last_known_version(pool: &PgPool, chat_id: i64, version: &str) -> anyhow::Result<()> {
+pub async fn set_last_known_version(
+    pool: &PgPool,
+    chat_id: i64,
+    version: &str,
+) -> anyhow::Result<()> {
     sqlx::query(
         r#"
         INSERT INTO bot_chat_state (chat_id, last_known_version, last_reminder_at)
@@ -62,12 +66,10 @@ pub async fn mark_non_compliant(pool: &PgPool, chat_id: i64, user_id: i64) -> an
 }
 
 pub async fn reset_compliance_deadlines(pool: &PgPool, chat_id: i64) -> anyhow::Result<()> {
-    sqlx::query(
-        "UPDATE bot_member_compliance SET required_since = NOW() WHERE chat_id = $1",
-    )
-    .bind(chat_id)
-    .execute(pool)
-    .await?;
+    sqlx::query("UPDATE bot_member_compliance SET required_since = NOW() WHERE chat_id = $1")
+        .bind(chat_id)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

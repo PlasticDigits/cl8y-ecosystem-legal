@@ -9,9 +9,7 @@ fn normalize_terra_classic_address(account: &str) -> AppResult<String> {
     let (hrp, data, variant) = decode(account)
         .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))?;
     if hrp != TERRA_ACCOUNT_HRP || variant != Variant::Bech32 {
-        return Err(AppError::BadRequest(
-            "invalid Terra Classic address".into(),
-        ));
+        return Err(AppError::BadRequest("invalid Terra Classic address".into()));
     }
     let bytes = Vec::<u8>::from_base32(&data)
         .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))?;
@@ -20,7 +18,7 @@ fn normalize_terra_classic_address(account: &str) -> AppResult<String> {
             "invalid Terra Classic address length".into(),
         ));
     }
-    // Canonical lowercase bech32 (reject mixed-case by re-encoding).
+    // Bech32 decode rejects mixed case; all-uppercase is accepted and re-encoded lowercase.
     encode(TERRA_ACCOUNT_HRP, bytes.to_base32(), Variant::Bech32)
         .map_err(|_| AppError::BadRequest("invalid Terra Classic address".into()))
 }
@@ -56,7 +54,9 @@ pub fn normalize_account(network: &str, account: &str) -> AppResult<String> {
             }
             Ok(account.to_string())
         }
-        _ => Err(AppError::BadRequest(format!("unsupported network: {network}"))),
+        _ => Err(AppError::BadRequest(format!(
+            "unsupported network: {network}"
+        ))),
     }
 }
 
@@ -85,6 +85,18 @@ mod tests {
                 "TERRA_CLASSIC",
                 "cosmos180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt"
             ),
+            Err(AppError::BadRequest(_))
+        ));
+    }
+
+    #[test]
+    fn terra_uppercases_to_canonical_lowercase_and_rejects_mixed_case() {
+        let lower = "terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt";
+        let upper = lower.to_uppercase();
+        assert_eq!(normalize_account("TERRA_CLASSIC", &upper).unwrap(), lower);
+        let mixed = format!("tErRa{}", &lower[5..]);
+        assert!(matches!(
+            normalize_account("TERRA_CLASSIC", &mixed),
             Err(AppError::BadRequest(_))
         ));
     }

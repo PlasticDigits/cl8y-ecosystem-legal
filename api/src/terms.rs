@@ -52,8 +52,8 @@ pub fn parse_terms_file(content: &str) -> AppResult<ParsedTermsFile> {
         }
     }
 
-    let version_label =
-        version_label.ok_or_else(|| AppError::BadRequest("missing Version: in terms file".into()))?;
+    let version_label = version_label
+        .ok_or_else(|| AppError::BadRequest("missing Version: in terms file".into()))?;
     let effective_date = effective_date
         .ok_or_else(|| AppError::BadRequest("missing Effective date: in terms file".into()))?;
 

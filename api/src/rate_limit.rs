@@ -5,21 +5,20 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter,
 };
-use std::{
-    net::IpAddr,
-    num::NonZeroU32,
-    sync::Arc,
-};
+use std::{net::IpAddr, num::NonZeroU32, sync::Arc};
 
 use crate::error::AppError;
+
+type DirectLimiter = RateLimiter<NotKeyed, InMemoryState, DefaultClock>;
+type IpLimiterMap = Arc<DashMap<IpAddr, Arc<DirectLimiter>>>;
 
 #[derive(Clone)]
 pub struct RateLimitState {
     read_per_min: u32,
     write_per_min: u32,
-    read_buckets: Arc<DashMap<IpAddr, Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>>>,
-    write_buckets: Arc<DashMap<IpAddr, Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>>>,
-    update_terms_buckets: Arc<DashMap<IpAddr, Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>>>,
+    read_buckets: IpLimiterMap,
+    write_buckets: IpLimiterMap,
+    update_terms_buckets: IpLimiterMap,
 }
 
 impl RateLimitState {

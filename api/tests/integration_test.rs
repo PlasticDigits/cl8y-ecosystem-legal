@@ -53,9 +53,8 @@ async fn body_json(body: Body) -> serde_json::Value {
 #[tokio::test]
 async fn integration_property_scoped_signatures() {
     let _guard = DB_LOCK.lock().await;
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
 
     let config = test_config(&database_url);
     let state = match build_state(config).await {
@@ -241,12 +240,45 @@ fn terra_adr036_sign(key: &SigningKey, address: &str, message: &str) -> String {
     STANDARD.encode(sig.to_bytes())
 }
 
+async fn reset_db(pool: &sqlx::PgPool) {
+    sqlx::query("DELETE FROM signatures")
+        .execute(pool)
+        .await
+        .ok();
+    sqlx::query("DELETE FROM terms_versions")
+        .execute(pool)
+        .await
+        .ok();
+    sqlx::query("DELETE FROM properties")
+        .execute(pool)
+        .await
+        .ok();
+}
+
+async fn publish_fixture_terms(pool: &sqlx::PgPool) {
+    let terms_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../TERMS_AND_CONDITIONS.txt");
+    publish_from_path(pool, terms_path).await.expect("publish");
+}
+
+async fn post_wallet(app: axum::Router, body: serde_json::Value) -> StatusCode {
+    app.oneshot(
+        Request::builder()
+            .method("POST")
+            .uri("/api/v1/signatures/wallet")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap(),
+    )
+    .await
+    .unwrap()
+    .status()
+}
+
 #[tokio::test]
 async fn integration_terra_classic_adr036_wallet_submit() {
     let _guard = DB_LOCK.lock().await;
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
 
     let config = test_config(&database_url);
     let state = match build_state(config).await {
@@ -257,23 +289,8 @@ async fn integration_terra_classic_adr036_wallet_submit() {
         }
     };
 
-    sqlx::query("DELETE FROM signatures")
-        .execute(&state.pool)
-        .await
-        .ok();
-    sqlx::query("DELETE FROM terms_versions")
-        .execute(&state.pool)
-        .await
-        .ok();
-    sqlx::query("DELETE FROM properties")
-        .execute(&state.pool)
-        .await
-        .ok();
-
-    let terms_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../TERMS_AND_CONDITIONS.txt");
-    publish_from_path(&state.pool, terms_path)
-        .await
-        .expect("publish");
+    reset_db(&state.pool).await;
+    publish_fixture_terms(&state.pool).await;
 
     let app = build_app(state);
     let key = SigningKey::from_slice(&[0x33u8; 32]).unwrap();
@@ -295,11 +312,9 @@ async fn integration_terra_classic_adr036_wallet_submit() {
     )
     .await;
 
-    let effective = chrono::NaiveDate::parse_from_str(
-        terms["effective_date"].as_str().unwrap(),
-        "%Y-%m-%d",
-    )
-    .expect("effective_date");
+    let effective =
+        chrono::NaiveDate::parse_from_str(terms["effective_date"].as_str().unwrap(), "%Y-%m-%d")
+            .expect("effective_date");
     let message = build_wallet_message(
         terms["version_label"].as_str().unwrap(),
         effective,
@@ -310,30 +325,20 @@ async fn integration_terra_classic_adr036_wallet_submit() {
     );
     let signature = terra_adr036_sign(&key, &address, &message);
 
-    let res = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/v1/signatures/wallet")
-                .header("content-type", "application/json")
-                .body(Body::from(
-                    serde_json::json!({
-                        "property": property,
-                        "network": "TERRA_CLASSIC",
-                        "account_id": address,
-                        "message": message,
-                        "signature": signature,
-                        "pubkey": pubkey_b64,
-                        "client_timestamp": ts.to_rfc3339(),
-                    })
-                    .to_string(),
-                ))
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-    assert_eq!(res.status(), StatusCode::OK);
+    let res = post_wallet(
+        app.clone(),
+        serde_json::json!({
+            "property": property,
+            "network": "TERRA_CLASSIC",
+            "account_id": address,
+            "message": message,
+            "signature": signature,
+            "pubkey": pubkey_b64,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(res, StatusCode::OK);
 
     let status = body_json(
         app.oneshot(
@@ -350,4 +355,157 @@ async fn integration_terra_classic_adr036_wallet_submit() {
     )
     .await;
     assert_eq!(status["signed_latest"], true);
+}
+
+/// Issue #1 abuse paths: cross-property replay, skewed timestamp, wrong pubkey at HTTP layer.
+#[tokio::test]
+async fn integration_terra_classic_adr036_rejects_abuse() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_terra_classic_adr036_rejects_abuse: {e}");
+            return;
+        }
+    };
+
+    reset_db(&state.pool).await;
+    publish_fixture_terms(&state.pool).await;
+
+    let app = build_app(state);
+    let key = SigningKey::from_slice(&[0x33u8; 32]).unwrap();
+    let other_key = SigningKey::from_slice(&[0x44u8; 32]).unwrap();
+    let (address, pubkey_b64) = terra_address_and_pubkey(&key);
+    let (_other_addr, other_pubkey_b64) = terra_address_and_pubkey(&other_key);
+    let ts = Utc::now();
+    let property_a = "terra-a.example.com";
+    let property_b = "terra-b.example.com";
+
+    for property in [property_a, property_b] {
+        let _ = body_json(
+            app.clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/api/v1/terms/latest?property={property}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .into_body(),
+        )
+        .await;
+    }
+
+    let terms: serde_json::Value = body_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/v1/terms/latest?property={property_a}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .into_body(),
+    )
+    .await;
+    let effective =
+        chrono::NaiveDate::parse_from_str(terms["effective_date"].as_str().unwrap(), "%Y-%m-%d")
+            .expect("effective_date");
+    let version = terms["version_label"].as_str().unwrap();
+
+    let message_a = build_wallet_message(
+        version,
+        effective,
+        property_a,
+        "TERRA_CLASSIC",
+        &address,
+        ts,
+    );
+    let signature_a = terra_adr036_sign(&key, &address, &message_a);
+
+    let message_b = build_wallet_message(
+        version,
+        effective,
+        property_b,
+        "TERRA_CLASSIC",
+        &address,
+        ts,
+    );
+    assert_ne!(message_a, message_b);
+
+    let replay = post_wallet(
+        app.clone(),
+        serde_json::json!({
+            "property": property_b,
+            "network": "TERRA_CLASSIC",
+            "account_id": address,
+            "message": message_b,
+            "signature": signature_a,
+            "pubkey": pubkey_b64,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(replay, StatusCode::BAD_REQUEST);
+
+    let tampered = post_wallet(
+        app.clone(),
+        serde_json::json!({
+            "property": property_a,
+            "network": "TERRA_CLASSIC",
+            "account_id": address,
+            "message": message_b,
+            "signature": signature_a,
+            "pubkey": pubkey_b64,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(tampered, StatusCode::BAD_REQUEST);
+
+    let wrong_pk = post_wallet(
+        app.clone(),
+        serde_json::json!({
+            "property": property_a,
+            "network": "TERRA_CLASSIC",
+            "account_id": address,
+            "message": message_a,
+            "signature": signature_a,
+            "pubkey": other_pubkey_b64,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(wrong_pk, StatusCode::BAD_REQUEST);
+
+    let skewed_ts = ts - chrono::Duration::seconds(301);
+    let skewed_msg = build_wallet_message(
+        version,
+        effective,
+        property_a,
+        "TERRA_CLASSIC",
+        &address,
+        skewed_ts,
+    );
+    let skewed_sig = terra_adr036_sign(&key, &address, &skewed_msg);
+    let skew = post_wallet(
+        app,
+        serde_json::json!({
+            "property": property_a,
+            "network": "TERRA_CLASSIC",
+            "account_id": address,
+            "message": skewed_msg,
+            "signature": skewed_sig,
+            "pubkey": pubkey_b64,
+            "client_timestamp": skewed_ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(skew, StatusCode::BAD_REQUEST);
 }

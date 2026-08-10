@@ -6,6 +6,20 @@ import { el, renderMissingProperty, renderSuccess } from "../ui";
 /** Terra Classic mainnet — do not retarget to Terra 2.0 without an explicit product change. */
 const TERRA_CHAIN_ID = "columbus-5";
 
+/**
+ * Canonicalize Keplr bech32 to lowercase before building/signing the legal message.
+ * API `normalize_account` also re-encodes lowercase; mixed case is invalid per BIP-173.
+ */
+function canonicalizeTerraAddress(address: string): string {
+  const trimmed = address.trim();
+  const lower = trimmed.toLowerCase();
+  const upper = trimmed.toUpperCase();
+  if (trimmed !== lower && trimmed !== upper) {
+    throw new Error("invalid Terra Classic address (mixed case)");
+  }
+  return lower;
+}
+
 interface KeplrKey {
   bech32Address: string;
 }
@@ -58,7 +72,7 @@ export async function renderTerra(root: HTMLElement) {
       if (!window.keplr) throw new Error("Keplr extension not found");
       await window.keplr.enable(TERRA_CHAIN_ID);
       const key = await window.keplr.getKey(TERRA_CHAIN_ID);
-      const accountId = key.bech32Address;
+      const accountId = canonicalizeTerraAddress(key.bech32Address);
       const terms = await getTermsLatest(property);
       const clientTimestamp = new Date();
       const message = buildWalletMessage({

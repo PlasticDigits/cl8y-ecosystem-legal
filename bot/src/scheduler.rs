@@ -21,7 +21,14 @@ pub fn spawn(state: Arc<BotState>, bot: Bot) {
         tokio::time::sleep(Duration::from_secs(30)).await;
         for chat in &boot_state.config.allowed_chats {
             let chat_id = chat.chat_id;
-            if let Err(e) = post_reminder(&boot_bot, &boot_state.pool, &boot_state.config, &boot_state.api, chat_id).await
+            if let Err(e) = post_reminder(
+                &boot_bot,
+                &boot_state.pool,
+                &boot_state.config,
+                &boot_state.api,
+                chat_id,
+            )
+            .await
             {
                 error!(?e, chat_id, "startup reminder failed");
             }
@@ -56,7 +63,10 @@ async fn terms_poll_loop(bot: Bot, state: Arc<BotState>, interval_minutes: u64) 
             let chat_id = chat.chat_id;
             match state.api.latest_version(chat_id).await {
                 Ok(Some(current)) => {
-                    let known = db::get_last_known_version(&state.pool, chat_id).await.ok().flatten();
+                    let known = db::get_last_known_version(&state.pool, chat_id)
+                        .await
+                        .ok()
+                        .flatten();
                     if known.as_deref() != Some(current.as_str()) {
                         info!(chat_id, version = %current, "terms version changed");
                         if let Err(e) = announce_terms_update(

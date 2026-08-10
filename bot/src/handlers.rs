@@ -1,15 +1,12 @@
 use std::sync::Arc;
 
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, MessageEntityKind, ParseMode, WebAppInfo};
+use teloxide::types::{
+    InlineKeyboardButton, InlineKeyboardMarkup, MessageEntityKind, ParseMode, WebAppInfo,
+};
 use tracing::warn;
 
-use crate::{
-    api_client::LegalApi,
-    config::Config,
-    enforcement,
-    messages::private_start_intro,
-};
+use crate::{api_client::LegalApi, config::Config, enforcement, messages::private_start_intro};
 
 pub struct BotState {
     pub config: Config,
@@ -78,8 +75,8 @@ fn is_command(msg: &Message, cmd: &str, bot_username: Option<&str>) -> bool {
             if !matches!(entity.kind, MessageEntityKind::BotCommand) {
                 continue;
             }
-            let start = entity.offset as usize;
-            let end = start + entity.length as usize;
+            let start = entity.offset;
+            let end = start + entity.length;
             let Some(slice) = text.get(start..end) else {
                 continue;
             };
@@ -112,7 +109,11 @@ async fn reply_chat_id(bot: &Bot, msg: &Message) -> ResponseResult<()> {
     Ok(())
 }
 
-pub async fn on_chat_member(bot: Bot, state: Arc<BotState>, update: ChatMemberUpdated) -> ResponseResult<()> {
+pub async fn on_chat_member(
+    bot: Bot,
+    state: Arc<BotState>,
+    update: ChatMemberUpdated,
+) -> ResponseResult<()> {
     let chat_id = update.chat.id;
     let user = &update.new_chat_member.user;
 
@@ -125,8 +126,13 @@ pub async fn on_chat_member(bot: Bot, state: Arc<BotState>, update: ChatMemberUp
             teloxide::types::ChatMemberStatus::Left | teloxide::types::ChatMemberStatus::Banned
         );
 
-        if let Err(e) =
-            enforcement::handle_bot_membership(bot.clone(), state.config.clone(), chat_id, was_added).await
+        if let Err(e) = enforcement::handle_bot_membership(
+            bot.clone(),
+            state.config.clone(),
+            chat_id,
+            was_added,
+        )
+        .await
         {
             warn!(?e, "bot membership handler");
         }
@@ -144,7 +150,8 @@ pub async fn on_chat_member(bot: Bot, state: Arc<BotState>, update: ChatMemberUp
             | teloxide::types::ChatMemberStatus::Restricted
     ) && matches!(
         update.new_chat_member.status(),
-        teloxide::types::ChatMemberStatus::Member | teloxide::types::ChatMemberStatus::Administrator
+        teloxide::types::ChatMemberStatus::Member
+            | teloxide::types::ChatMemberStatus::Administrator
     );
 
     if joined {
@@ -171,7 +178,9 @@ async fn send_sign_menu(bot: &Bot, config: &Config, dm_chat: ChatId) -> Response
     for chat in &config.allowed_chats {
         let label = format!("Sign {}", chat.label);
         let url = config.sign_url(chat.chat_id);
-        let web_app = WebAppInfo { url: url.parse().expect("valid sign url") };
+        let web_app = WebAppInfo {
+            url: url.parse().expect("valid sign url"),
+        };
         rows.push(vec![InlineKeyboardButton::web_app(label, web_app)]);
     }
 

@@ -12,11 +12,12 @@ fn eip191_hash(message: &str) -> [u8; 32] {
 }
 
 pub fn verify_evm(expected_address: &str, message: &str, signature_hex: &str) -> AppResult<()> {
-    let sig_bytes = hex::decode(signature_hex.trim_start_matches("0x")).map_err(|_| {
-        AppError::BadRequest("invalid EVM signature encoding".into())
-    })?;
+    let sig_bytes = hex::decode(signature_hex.trim_start_matches("0x"))
+        .map_err(|_| AppError::BadRequest("invalid EVM signature encoding".into()))?;
     if sig_bytes.len() != 65 {
-        return Err(AppError::BadRequest("EVM signature must be 65 bytes".into()));
+        return Err(AppError::BadRequest(
+            "EVM signature must be 65 bytes".into(),
+        ));
     }
 
     let v = sig_bytes[64];
@@ -42,7 +43,9 @@ pub fn verify_evm(expected_address: &str, message: &str, signature_hex: &str) ->
     let recovered = format!("0x{}", hex::encode(&digest[12..]));
 
     if recovered != expected_address.to_lowercase() {
-        return Err(AppError::BadRequest("signature does not match address".into()));
+        return Err(AppError::BadRequest(
+            "signature does not match address".into(),
+        ));
     }
     Ok(())
 }
@@ -50,7 +53,7 @@ pub fn verify_evm(expected_address: &str, message: &str, signature_hex: &str) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use k256::ecdsa::{signature::hazmat::PrehashSigner, SigningKey, VerifyingKey};
+    use k256::ecdsa::{SigningKey, VerifyingKey};
 
     fn address_from_key(key: &SigningKey) -> String {
         let vk = VerifyingKey::from(key);

@@ -3,15 +3,15 @@ pub mod signatures;
 pub mod terms;
 pub mod update_terms;
 
+use axum::extract::DefaultBodyLimit;
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
-use crate::{
-    config::Config,
-    rate_limit::rate_limit_middleware,
-    AppState,
-};
+use crate::{config::Config, rate_limit::rate_limit_middleware, AppState};
+
+/// Cap JSON wallet/telegram submits (message + sig + pubkey). Legal messages are small.
+const MAX_REQUEST_BODY_BYTES: usize = 64 * 1024;
 
 pub fn build_router(state: AppState) -> Router {
     let cors = build_cors(&state.config);
@@ -28,6 +28,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(update_terms::routes())
         .nest("/api/v1", api)
         .nest("/admin", admin)
+        .layer(DefaultBodyLimit::max(MAX_REQUEST_BODY_BYTES))
         .layer(axum::middleware::from_fn_with_state(
             state.rate_limit.clone(),
             rate_limit_middleware,

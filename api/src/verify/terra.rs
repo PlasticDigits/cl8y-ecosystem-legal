@@ -134,9 +134,7 @@ mod tests {
     fn adr036_sign_doc_matches_cosmjs_fixture() {
         let address = "terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt";
         let message = "CL8Y Terra ADR-036 test";
-        let expected = concat!(
-            r#"{"account_number":"0","chain_id":"","fee":{"amount":[],"gas":"0"},"memo":"","msgs":[{"type":"sign/MsgSignData","value":{"data":"Q0w4WSBUZXJyYSBBRFItMDM2IHRlc3Q=","signer":"terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt"}}],"sequence":"0"}"#
-        );
+        let expected = r#"{"account_number":"0","chain_id":"","fee":{"amount":[],"gas":"0"},"memo":"","msgs":[{"type":"sign/MsgSignData","value":{"data":"Q0w4WSBUZXJyYSBBRFItMDM2IHRlc3Q=","signer":"terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt"}}],"sequence":"0"}"#;
         assert_eq!(
             String::from_utf8(adr036_sign_doc_bytes(address, message)).unwrap(),
             expected
@@ -239,25 +237,14 @@ mod tests {
             Err(AppError::BadRequest(_))
         ));
         assert!(matches!(
-            verify_terra(
-                &address,
-                message,
-                &STANDARD.encode([0u8; 32]),
-                &pubkey_b64
-            ),
+            verify_terra(&address, message, &STANDARD.encode([0u8; 32]), &pubkey_b64),
             Err(AppError::BadRequest(_))
         ));
         assert!(matches!(
-            verify_terra(
-                &address,
-                message,
-                &sig_b64,
-                &STANDARD.encode([0u8; 16])
-            ),
+            verify_terra(&address, message, &sig_b64, &STANDARD.encode([0u8; 16])),
             Err(AppError::BadRequest(_))
         ));
     }
-
 
     #[test]
     fn node_crypto_vector_verifies() {
@@ -273,5 +260,44 @@ mod tests {
     fn escape_amino_handles_amp_lt_gt() {
         let escaped = escape_amino_json_string("A & B <C>");
         assert_eq!(escaped, "A \\u0026 B \\u003cC\\u003e");
+    }
+
+    #[test]
+    fn roundtrip_message_with_amp_lt_gt_escapes() {
+        let sk = SigningKey::from_bytes((&[0x33u8; 32]).into()).expect("key");
+        let vk = VerifyingKey::from(&sk);
+        let compressed = vk.to_encoded_point(true);
+        let address = cosmos_address_from_pubkey(compressed.as_bytes(), TERRA_HRP).unwrap();
+        let message = "CL8Y accept: A & B <C> > D";
+        let sig_b64 = sign_adr036(&sk, &address, message);
+        let pubkey_b64 = STANDARD.encode(compressed.as_bytes());
+        // Message chars are base64'd into `data`; verify still succeeds end-to-end.
+        verify_terra(&address, message, &sig_b64, &pubkey_b64).unwrap();
+    }
+
+    #[test]
+    fn accepts_high_s_after_normalize() {
+        use k256::elliptic_curve::scalar::IsHigh;
+
+        let sk = SigningKey::from_bytes((&[0x33u8; 32]).into()).expect("key");
+        let vk = VerifyingKey::from(&sk);
+        let compressed = vk.to_encoded_point(true);
+        let address = cosmos_address_from_pubkey(compressed.as_bytes(), TERRA_HRP).unwrap();
+        let message = "CL8Y Terra high-S";
+        let doc = adr036_sign_doc_bytes(&address, message);
+        let mut sig: Signature = sk.sign(&doc);
+        // Flip to high-S when the signer produced low-S (usual case).
+        if !bool::from(sig.s().is_high()) {
+            sig = Signature::from_scalars(*sig.r(), std::ops::Neg::neg(*sig.s())).expect("flip s");
+            assert!(bool::from(sig.s().is_high()));
+        }
+        let pubkey_b64 = STANDARD.encode(compressed.as_bytes());
+        verify_terra(
+            &address,
+            message,
+            &STANDARD.encode(sig.to_bytes()),
+            &pubkey_b64,
+        )
+        .unwrap();
     }
 }

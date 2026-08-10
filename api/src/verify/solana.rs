@@ -24,7 +24,9 @@ pub fn verify_solana(expected_pubkey: &str, message: &str, signature_b58: &str) 
         .into_vec()
         .map_err(|_| AppError::BadRequest("invalid Solana signature".into()))?;
     if sig_bytes.len() != 64 {
-        return Err(AppError::BadRequest("invalid Solana signature length".into()));
+        return Err(AppError::BadRequest(
+            "invalid Solana signature length".into(),
+        ));
     }
 
     let vk = VerifyingKey::try_from(pubkey_bytes.as_slice())

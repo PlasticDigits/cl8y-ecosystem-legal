@@ -7,8 +7,7 @@ use crate::{
 };
 
 pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/update_terms", get(update_terms).post(update_terms))
+    Router::new().route("/update_terms", get(update_terms).post(update_terms))
 }
 
 async fn update_terms(State(state): State<AppState>) -> AppResult<Json<TermsSyncOutcome>> {

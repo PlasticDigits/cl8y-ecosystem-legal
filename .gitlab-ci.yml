@@ -1,3 +1,11 @@
+# Prefer MR pipelines when an MR is open; otherwise run on branch pushes.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
 stages:
   - lint
   - test
@@ -10,9 +18,6 @@ lint:gitleaks:
     entrypoint: [""]
   script:
     - gitleaks detect --source . --config .gitleaks.toml --verbose --redact
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
   DATABASE_URL: postgres://cl8y_legal:cl8y_legal@postgres:5432/cl8y_legal

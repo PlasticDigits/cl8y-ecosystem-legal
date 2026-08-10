@@ -77,8 +77,16 @@ pub fn routes() -> Router<AppState> {
         .route("/signatures/telegram", post(telegram))
 }
 
-async fn status(State(state): State<AppState>, Query(q): Query<StatusQuery>) -> AppResult<Json<StatusResponse>> {
-    let prop = resolve_property(&state.pool, &q.property, state.config.allow_localhost_property).await?;
+async fn status(
+    State(state): State<AppState>,
+    Query(q): Query<StatusQuery>,
+) -> AppResult<Json<StatusResponse>> {
+    let prop = resolve_property(
+        &state.pool,
+        &q.property,
+        state.config.allow_localhost_property,
+    )
+    .await?;
     let network = q.network.trim().to_uppercase();
     let account = normalize_account(&network, &q.account)?;
 
@@ -109,7 +117,10 @@ async fn status(State(state): State<AppState>, Query(q): Query<StatusQuery>) -> 
     }))
 }
 
-async fn wallet(State(state): State<AppState>, Json(body): Json<WalletSubmitBody>) -> AppResult<Json<serde_json::Value>> {
+async fn wallet(
+    State(state): State<AppState>,
+    Json(body): Json<WalletSubmitBody>,
+) -> AppResult<Json<serde_json::Value>> {
     let proof = serde_json::json!({
         "type": format!("{}_personal_sign", body.network.to_lowercase()),
         "signature": body.signature,
@@ -161,9 +172,9 @@ async fn telegram(
                 proof,
             )
         } else {
-            let id = body
-                .id
-                .ok_or_else(|| AppError::BadRequest("missing telegram auth (widget or init_data)".into()))?;
+            let id = body.id.ok_or_else(|| {
+                AppError::BadRequest("missing telegram auth (widget or init_data)".into())
+            })?;
             let first_name = body
                 .first_name
                 .clone()
@@ -190,7 +201,14 @@ async fn telegram(
                 "hash": body.hash,
                 "auth_date": auth_date,
             });
-            (id, first_name, body.last_name.clone(), body.username.clone(), auth_date, proof)
+            (
+                id,
+                first_name,
+                body.last_name.clone(),
+                body.username.clone(),
+                auth_date,
+                proof,
+            )
         };
 
     let client_timestamp = DateTime::from_timestamp(auth_date, 0)
@@ -200,7 +218,12 @@ async fn telegram(
     let account_id = user_id.to_string();
     let display = username.as_deref().map(|u| format!("@{u}"));
 
-    let prop = resolve_property(&state.pool, &body.property, state.config.allow_localhost_property).await?;
+    let prop = resolve_property(
+        &state.pool,
+        &body.property,
+        state.config.allow_localhost_property,
+    )
+    .await?;
     let terms = if let Some(ref label) = body.version_label {
         crate::terms::get_terms_by_label(&state.pool, label)
             .await?

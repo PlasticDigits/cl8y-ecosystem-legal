@@ -6,7 +6,9 @@ use crate::{
     api_client::LegalApi,
     config::Config,
     db,
-    messages::{reminder_text, terms_updated_header, unauthorized_group, welcome_new_member, BOT_ADDED},
+    messages::{
+        reminder_text, terms_updated_header, unauthorized_group, welcome_new_member, BOT_ADDED,
+    },
 };
 
 pub async fn handle_bot_membership(
@@ -77,7 +79,11 @@ pub async fn handle_group_message(
     if !config.is_allowed_chat(chat_id) {
         return Ok(());
     }
-    if api.is_signed_latest(chat_id, user_id).await.unwrap_or(false) {
+    if api
+        .is_signed_latest(chat_id, user_id)
+        .await
+        .unwrap_or(false)
+    {
         db::clear_compliant(pool, chat_id, user_id).await?;
     } else {
         db::mark_non_compliant(pool, chat_id, user_id).await?;
@@ -130,9 +136,12 @@ pub async fn announce_terms_update(
 
     let filename = format!("CL8Y_Terms_{}.txt", version.replace(' ', "_"));
     let bytes = content.into_bytes();
-    bot.send_document(ChatId(chat_id), InputFile::memory(bytes).file_name(filename))
-        .caption("Full Terms & Conditions (plain text)")
-        .await?;
+    bot.send_document(
+        ChatId(chat_id),
+        InputFile::memory(bytes).file_name(filename),
+    )
+    .caption("Full Terms & Conditions (plain text)")
+    .await?;
 
     let reminder = reminder_text(config, chat_id, version);
     bot.send_message(ChatId(chat_id), reminder)
@@ -144,7 +153,11 @@ pub async fn announce_terms_update(
 
     let members = db::members_for_chat(pool, chat_id).await?;
     for user_id in members {
-        if api.is_signed_latest(chat_id, user_id).await.unwrap_or(false) {
+        if api
+            .is_signed_latest(chat_id, user_id)
+            .await
+            .unwrap_or(false)
+        {
             db::clear_compliant(pool, chat_id, user_id).await?;
         } else {
             db::mark_non_compliant(pool, chat_id, user_id).await?;
@@ -168,7 +181,11 @@ pub async fn run_kicks(
 
         for allowed in &config.allowed_chats {
             let chat_id = allowed.chat_id;
-            if api.is_signed_latest(chat_id, user_id).await.unwrap_or(false) {
+            if api
+                .is_signed_latest(chat_id, user_id)
+                .await
+                .unwrap_or(false)
+            {
                 db::clear_compliant(pool, chat_id, user_id).await?;
                 continue;
             }
@@ -212,8 +229,5 @@ pub async fn run_kicks(
 
 /// Returns true if the user is still an active member (not left/banned).
 pub fn is_active_member(status: ChatMemberStatus) -> bool {
-    !matches!(
-        status,
-        ChatMemberStatus::Left | ChatMemberStatus::Banned
-    )
+    !matches!(status, ChatMemberStatus::Left | ChatMemberStatus::Banned)
 }

@@ -29,13 +29,12 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> anyhow::Result<Self> {
         let allowed_chat_ids = parse_csv_i64(env::var("ALLOWED_CHAT_IDS").ok().as_deref());
-        let allowed_chat_usernames = parse_csv_str(env::var("ALLOWED_CHAT_USERNAMES").ok().as_deref());
+        let allowed_chat_usernames =
+            parse_csv_str(env::var("ALLOWED_CHAT_USERNAMES").ok().as_deref());
         let chat_labels = parse_chat_labels(env::var("CHAT_LABELS").ok().as_deref());
 
         if allowed_chat_ids.is_empty() && allowed_chat_usernames.is_empty() {
-            anyhow::bail!(
-                "set ALLOWED_CHAT_IDS and/or ALLOWED_CHAT_USERNAMES (comma-separated)"
-            );
+            anyhow::bail!("set ALLOWED_CHAT_IDS and/or ALLOWED_CHAT_USERNAMES (comma-separated)");
         }
 
         Ok(Self {
@@ -46,8 +45,9 @@ impl Config {
                 .unwrap_or_else(|_| "https://api.terms.cl8y.com/api/v1".into()),
             legal_public_base_url: env::var("LEGAL_PUBLIC_BASE_URL")
                 .unwrap_or_else(|_| "https://terms.cl8y.com".into()),
-            database_url: env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@localhost:5432/cl8y_legal".into()),
+            database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://cl8y_legal:cl8y_legal@localhost:5432/cl8y_legal".into()
+            }),
             reminder_interval_hours: env::var("REMINDER_INTERVAL_HOURS")
                 .ok()
                 .and_then(|s| s.parse().ok())
@@ -125,7 +125,10 @@ impl Config {
 
     fn label_from_map(&self, key: &str) -> Option<String> {
         let lower = key.to_ascii_lowercase();
-        self.chat_labels.get(&lower).or_else(|| self.chat_labels.get(key)).cloned()
+        self.chat_labels
+            .get(&lower)
+            .or_else(|| self.chat_labels.get(key))
+            .cloned()
     }
 
     pub fn is_allowed_chat(&self, chat_id: i64) -> bool {
