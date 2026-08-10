@@ -52,15 +52,17 @@ async fn list_properties(
 
     Ok(Json(
         rows.into_iter()
-            .map(|(kind, identifier, display_name, created_at)| PropertyListItem {
-                kind: match kind {
-                    PropertyKind::Website => "website".to_string(),
-                    PropertyKind::TelegramChannel => "telegram_channel".to_string(),
+            .map(
+                |(kind, identifier, display_name, created_at)| PropertyListItem {
+                    kind: match kind {
+                        PropertyKind::Website => "website".to_string(),
+                        PropertyKind::TelegramChannel => "telegram_channel".to_string(),
+                    },
+                    identifier,
+                    display_name,
+                    created_at: created_at.to_rfc3339(),
                 },
-                identifier,
-                display_name,
-                created_at: created_at.to_rfc3339(),
-            })
+            )
             .collect(),
     ))
 }

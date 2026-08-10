@@ -22,7 +22,8 @@ pub fn infer_kind(raw: &str) -> PropertyKind {
     let trimmed = raw.trim();
     if trimmed.starts_with('-') && trimmed[1..].chars().all(|c| c.is_ascii_digit()) {
         PropertyKind::TelegramChannel
-    } else if trimmed.chars().all(|c| c.is_ascii_digit() || c == '-') && trimmed.parse::<i64>().is_ok()
+    } else if trimmed.chars().all(|c| c.is_ascii_digit() || c == '-')
+        && trimmed.parse::<i64>().is_ok()
     {
         // positive small ids unlikely for channels; treat negative only as telegram
         PropertyKind::Website
@@ -31,7 +32,11 @@ pub fn infer_kind(raw: &str) -> PropertyKind {
     }
 }
 
-pub fn normalize_identifier(raw: &str, kind: PropertyKind, allow_localhost: bool) -> AppResult<String> {
+pub fn normalize_identifier(
+    raw: &str,
+    kind: PropertyKind,
+    allow_localhost: bool,
+) -> AppResult<String> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return Err(AppError::BadRequest("property is required".into()));
@@ -66,7 +71,9 @@ pub fn normalize_identifier(raw: &str, kind: PropertyKind, allow_localhost: bool
                 return Err(AppError::BadRequest("invalid website property".into()));
             }
             if !allow_localhost && (host == "localhost" || host.ends_with(".localhost")) {
-                return Err(AppError::BadRequest("localhost property not allowed".into()));
+                return Err(AppError::BadRequest(
+                    "localhost property not allowed".into(),
+                ));
             }
             if !host.contains('.') && host != "localhost" {
                 return Err(AppError::BadRequest("invalid website hostname".into()));

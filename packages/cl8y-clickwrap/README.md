@@ -103,6 +103,8 @@ await client.submitTelegram({ /* … */ });
 | `TerraClassic`  | `TERRA_CLASSIC`  | `terra_classic`  |
 | `Telegram`      | `TELEGRAM`       | `telegram`       |
 
+Terra Classic signing on the hosted portal uses Keplr ADR-036 (`columbus-5`). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify. Crypto invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
+
 ## React exports
 
 - `TermsGate` — drop-in gate component

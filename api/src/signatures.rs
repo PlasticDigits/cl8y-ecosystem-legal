@@ -3,15 +3,18 @@ use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::property::PropertyRow;
 use crate::{
     account::normalize_account,
     error::{AppError, AppResult},
-    message::{build_telegram_acceptance_message, build_wallet_message, validate_timestamp, verify_message_matches},
+    message::{
+        build_telegram_acceptance_message, build_wallet_message, validate_timestamp,
+        verify_message_matches,
+    },
     property::{resolve_property, PropertyKind},
     terms::{get_latest_terms, get_terms_by_label, TermsVersion},
     verify::verify_wallet_signature,
 };
-use crate::property::PropertyRow;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SignatureRow {
@@ -55,6 +58,7 @@ pub async fn get_signature_for_account(
     Ok(row)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_signature(
     pool: &PgPool,
     property_id: Uuid,
@@ -101,6 +105,7 @@ pub async fn insert_signature(
     Ok(row)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn submit_wallet(
     pool: &PgPool,
     property_raw: &str,
@@ -160,6 +165,7 @@ pub async fn submit_wallet(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn submit_telegram(
     pool: &PgPool,
     property_raw: &str,

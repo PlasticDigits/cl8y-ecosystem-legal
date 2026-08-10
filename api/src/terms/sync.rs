@@ -15,11 +15,7 @@ pub fn parse_version_line_2(content: &str) -> AppResult<String> {
     line.strip_prefix("Version:")
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty())
-        .ok_or_else(|| {
-            AppError::BadRequest(format!(
-                "line 2 must be 'Version: …', got: {line}"
-            ))
-        })
+        .ok_or_else(|| AppError::BadRequest(format!("line 2 must be 'Version: …', got: {line}")))
 }
 
 pub async fn fetch_terms_from_url(url: &str) -> AppResult<String> {

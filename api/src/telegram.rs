@@ -53,8 +53,8 @@ pub fn verify_telegram_login(payload: &TelegramAuthPayload, bot_token: &str) -> 
     secret_hasher.update(bot_token.as_bytes());
     let secret_key = secret_hasher.finalize();
 
-    let mut mac =
-        HmacSha256::new_from_slice(&secret_key).map_err(|_| AppError::Internal(anyhow::anyhow!("hmac")))?;
+    let mut mac = HmacSha256::new_from_slice(&secret_key)
+        .map_err(|_| AppError::Internal(anyhow::anyhow!("hmac")))?;
     mac.update(data_check_string.as_bytes());
     let result = mac.finalize().into_bytes();
     let expected = hex::encode(result);
@@ -125,8 +125,8 @@ pub fn verify_telegram_webapp_init_data(
     mac_key.update(&secret_key);
     let webapp_secret = mac_key.finalize().into_bytes();
 
-    let mut mac =
-        HmacSha256::new_from_slice(&webapp_secret).map_err(|_| AppError::Internal(anyhow::anyhow!("hmac")))?;
+    let mut mac = HmacSha256::new_from_slice(&webapp_secret)
+        .map_err(|_| AppError::Internal(anyhow::anyhow!("hmac")))?;
     mac.update(data_check_string.as_bytes());
     let expected = hex::encode(mac.finalize().into_bytes());
 

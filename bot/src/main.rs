@@ -60,12 +60,17 @@ async fn main() -> anyhow::Result<()> {
         },
     );
 
-    Dispatcher::builder(bot, dptree::entry().branch(message_handler).branch(member_handler))
-        .dependencies(dptree::deps![state])
-        .enable_ctrlc_handler()
-        .build()
-        .dispatch()
-        .await;
+    Dispatcher::builder(
+        bot,
+        dptree::entry()
+            .branch(message_handler)
+            .branch(member_handler),
+    )
+    .dependencies(dptree::deps![state])
+    .enable_ctrlc_handler()
+    .build()
+    .dispatch()
+    .await;
 
     Ok(())
 }

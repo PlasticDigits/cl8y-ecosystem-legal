@@ -54,8 +54,16 @@ pub fn routes() -> Router<AppState> {
         .route("/terms/{version_label}", get(by_version))
 }
 
-async fn latest(State(state): State<AppState>, Query(q): Query<PropertyQuery>) -> AppResult<Json<TermsLatestResponse>> {
-    let prop = resolve_property(&state.pool, &q.property, state.config.allow_localhost_property).await?;
+async fn latest(
+    State(state): State<AppState>,
+    Query(q): Query<PropertyQuery>,
+) -> AppResult<Json<TermsLatestResponse>> {
+    let prop = resolve_property(
+        &state.pool,
+        &q.property,
+        state.config.allow_localhost_property,
+    )
+    .await?;
     let terms = get_latest_terms(&state.pool)
         .await?
         .ok_or_else(|| AppError::NotFound("no published terms".into()))?;
@@ -75,7 +83,12 @@ async fn latest_content(
     State(state): State<AppState>,
     Query(q): Query<PropertyQuery>,
 ) -> AppResult<impl IntoResponse> {
-    let prop = resolve_property(&state.pool, &q.property, state.config.allow_localhost_property).await?;
+    let prop = resolve_property(
+        &state.pool,
+        &q.property,
+        state.config.allow_localhost_property,
+    )
+    .await?;
     let terms = get_latest_terms(&state.pool)
         .await?
         .ok_or_else(|| AppError::NotFound("no published terms".into()))?;
@@ -96,7 +109,12 @@ async fn by_version(
     axum::extract::Path(version_label): axum::extract::Path<String>,
     Query(q): Query<PropertyQuery>,
 ) -> AppResult<Json<TermsLatestResponse>> {
-    let prop = resolve_property(&state.pool, &q.property, state.config.allow_localhost_property).await?;
+    let prop = resolve_property(
+        &state.pool,
+        &q.property,
+        state.config.allow_localhost_property,
+    )
+    .await?;
     let terms = get_terms_by_label(&state.pool, &version_label)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("version {version_label}")))?;

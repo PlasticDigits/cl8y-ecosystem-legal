@@ -9,7 +9,7 @@ use crate::error::{AppError, AppResult};
 
 pub use evm::verify_evm;
 pub use solana::verify_solana;
-pub use terra::verify_terra;
+pub use terra::{adr036_sign_doc_bytes, verify_terra};
 
 #[derive(Debug, Deserialize)]
 pub struct WalletProof {
@@ -33,11 +33,14 @@ pub fn verify_wallet_signature(
         "EVM" => verify_evm(account_id, message, &proof.signature),
         "SOLANA" => verify_solana(account_id, message, &proof.signature),
         "TERRA_CLASSIC" => {
-            let pubkey = proof.pubkey.as_deref().ok_or_else(|| {
-                AppError::BadRequest("terra proof requires pubkey".into())
-            })?;
+            let pubkey = proof
+                .pubkey
+                .as_deref()
+                .ok_or_else(|| AppError::BadRequest("terra proof requires pubkey".into()))?;
             verify_terra(account_id, message, &proof.signature, pubkey)
         }
-        other => Err(AppError::BadRequest(format!("unsupported network: {other}"))),
+        other => Err(AppError::BadRequest(format!(
+            "unsupported network: {other}"
+        ))),
     }
 }

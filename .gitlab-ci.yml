@@ -1,3 +1,9 @@
+# Run on MR events and branch pushes (ensures test:rust / test:e2e are not skipped).
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
 stages:
   - lint
   - test
@@ -10,9 +16,6 @@ lint:gitleaks:
     entrypoint: [""]
   script:
     - gitleaks detect --source . --config .gitleaks.toml --verbose --redact
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
   DATABASE_URL: postgres://cl8y_legal:cl8y_legal@postgres:5432/cl8y_legal
@@ -100,6 +103,7 @@ test:e2e:
     - cd api
   script:
     - cargo build
+    - test -x target/debug/cl8y-legal-api
     - cd ..
     - npm ci
     - npm run build:sdk

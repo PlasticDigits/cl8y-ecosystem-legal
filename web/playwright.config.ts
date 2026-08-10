@@ -33,10 +33,12 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "cargo run --quiet",
+      // Prefer prebuilt debug binary (CI `cargo build`); fall back to `cargo run` locally.
+      command:
+        "sh -c 'if [ -x target/debug/cl8y-legal-api ]; then exec target/debug/cl8y-legal-api; else exec cargo run --quiet; fi'",
       cwd: apiDir,
       url: "http://127.0.0.1:8080/update_terms",
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env.CI,
       timeout: 180_000,
       env: {
         ...process.env,
@@ -44,10 +46,10 @@ export default defineConfig({
       },
     },
     {
-      command: "npm run dev",
+      command: "npm run dev -- --host 127.0.0.1 --port 5173 --strictPort",
       url: "http://127.0.0.1:5173",
-      reuseExistingServer: true,
-      timeout: 60_000,
+      reuseExistingServer: !process.env.CI,
+      timeout: 180_000,
       env: {
         ...process.env,
         VITE_API_BASE_URL: "",
