@@ -5,7 +5,7 @@ use cl8y_legal_api::{
     build_app, build_state, config::Config, message::build_wallet_message, terms::publish_from_path,
 };
 use http_body_util::BodyExt;
-use k256::ecdsa::{signature::hazmat::PrehashSigner, SigningKey};
+use k256::ecdsa::SigningKey;
 use sha3::{Digest, Keccak256};
 use tokio::sync::Mutex;
 use tower::ServiceExt;
