@@ -5,7 +5,7 @@ use cl8y_legal_api::{
     build_app, build_state, config::Config, message::build_wallet_message, terms::publish_from_path,
 };
 use http_body_util::BodyExt;
-use k256::ecdsa::SigningKey;
+use k256::ecdsa::{signature::hazmat::PrehashSigner, SigningKey};
 use sha3::{Digest, Keccak256};
 use tokio::sync::Mutex;
 use tower::ServiceExt;
@@ -22,11 +22,13 @@ fn test_config(database_url: &str) -> Config {
         terms_sync_interval_hours: 4,
         terms_sync_on_startup: false,
         admin_token: "test-admin".into(),
+        allow_insecure_defaults: false,
         telegram_bot_token: Some("123456:ABC-DEF".into()),
         rate_limit_read: 1000,
         rate_limit_write: 1000,
         cors_origins: vec!["*".into()],
         allow_localhost_property: true,
+        trusted_proxy_cidrs: vec![],
         static_dir: None,
     }
 }
