@@ -9,7 +9,14 @@ test.describe("EVM full-stack sign", () => {
     await page.goto("/sign/evm?property=cl8y.com");
 
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
-    await page.getByRole("button", { name: /Connect & sign/i }).click();
+    await expect(page.locator(".terms-body")).toContainText(/CL8Y ECOSYSTEM TERMS AND CONDITIONS/i, {
+      timeout: 30_000,
+    });
+    const signBtn = page.getByRole("button", { name: /Connect & sign/i });
+    await expect(signBtn).toBeDisabled();
+    await page.getByLabel(/I have read and agree to the Terms & Conditions/i).check();
+    await expect(signBtn).toBeEnabled();
+    await signBtn.click();
 
     await expect(page.getByRole("heading", { name: "Accepted" })).toBeVisible({ timeout: 30_000 });
 

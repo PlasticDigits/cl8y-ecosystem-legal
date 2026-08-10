@@ -1,7 +1,8 @@
-import { getTermsLatest, submitWallet } from "../api";
+import { getStatus, submitWallet } from "../api";
 import { buildWalletMessage } from "../message";
 import { getAppName, getRedirectUri, requireProperty } from "../query";
-import { el, renderMissingProperty, renderSuccess } from "../ui";
+import { renderSignShell } from "../signShell";
+import { renderMissingProperty, renderSuccess } from "../ui";
 
 /** Terra Classic mainnet — do not retarget to Terra 2.0 without an explicit product change. */
 const TERRA_CHAIN_ID = "columbus-5";
@@ -56,24 +57,24 @@ export async function renderTerra(root: HTMLElement) {
 
   const appName = getAppName();
   const redirectUri = getRedirectUri();
-  const statusEl = el("p", { className: "muted" }, ["Connect Keplr for Terra Classic."]);
-  const btn = el("button", {}, ["Connect & sign"]) as HTMLButtonElement;
 
-  root.replaceChildren(
-    el("h1", {}, ["Sign with Terra Classic wallet"]),
-    appName ? el("p", { className: "muted" }, [`App: ${appName}`]) : document.createComment(""),
-    el("p", { className: "muted" }, [`Property: ${property}`]),
-    el("div", { className: "card" }, [statusEl, btn]),
-  );
-
-  btn.onclick = async () => {
-    btn.disabled = true;
-    try {
+  await renderSignShell(root, {
+    title: "Sign with Terra Classic wallet",
+    property,
+    appName,
+    idleStatus: "Connect Keplr for Terra Classic.",
+    onSign: async ({ terms, setStatus }) => {
       if (!window.keplr) throw new Error("Keplr extension not found");
       await window.keplr.enable(TERRA_CHAIN_ID);
       const key = await window.keplr.getKey(TERRA_CHAIN_ID);
       const accountId = canonicalizeTerraAddress(key.bech32Address);
-      const terms = await getTermsLatest(property);
+
+      const status = await getStatus(property, "TERRA_CLASSIC", accountId);
+      if (status.signed_latest) {
+        renderSuccess(root, terms.version_label, redirectUri);
+        return;
+      }
+
       const clientTimestamp = new Date();
       const message = buildWalletMessage({
         versionLabel: terms.version_label,
@@ -83,7 +84,7 @@ export async function renderTerra(root: HTMLElement) {
         accountId,
         clientTimestamp,
       });
-      statusEl.textContent = "Confirm signature in Keplr…";
+      setStatus("Confirm signature in Keplr…");
       // Keplr wraps `message` as ADR-036 MsgSignData; API verifies the same envelope.
       const result = await window.keplr.signArbitrary(TERRA_CHAIN_ID, accountId, message);
       await submitWallet({
@@ -96,10 +97,6 @@ export async function renderTerra(root: HTMLElement) {
         client_timestamp: clientTimestamp.toISOString(),
       });
       renderSuccess(root, terms.version_label, redirectUri);
-    } catch (e) {
-      statusEl.className = "error";
-      statusEl.textContent = String(e);
-      btn.disabled = false;
-    }
-  };
+    },
+  });
 }

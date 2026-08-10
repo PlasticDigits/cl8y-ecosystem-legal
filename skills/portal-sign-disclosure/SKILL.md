@@ -1,0 +1,40 @@
+# Skill: Portal sign-page terms disclosure
+
+Guidance for third-party / agent players changing CL8Y Legal signing UX.
+
+**Issue:** GitLab [#2](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/2)  
+**Gap:** [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) (Portal UX — terms disclosure)  
+**Implementation:** [`web/src/signShell.ts`](../../web/src/signShell.ts) (EVM + Terra Classic)
+
+## When to use
+
+- Editing `/sign/evm` or `/sign/terra-classic` flows
+- Extending the same disclosure pattern to Solana / Telegram (still postponed unless explicitly scoped)
+- Changing consent gating, terms fetch, or sign-page DOM helpers
+
+## Invariants (do not break)
+
+1. **Notice before wallet:** Full latest terms text is visible before Connect & sign runs any wallet API.
+2. **Version + effective date** are shown near the terms body (from `GET /api/v1/terms/latest`).
+3. **Safe render:** Terms body uses text nodes only (`el` / `textContent`). Never `innerHTML` for API content or `property` query values.
+4. **Consent gate:** CTA disabled until terms load **and** the user checks “I have read and agree…”. Document any gate change in the MR.
+5. **Fetch once:** Metadata + content fetched once per page load (`getTermsLatest` + `getTermsContent` in parallel). No refetch storms on checkbox toggle.
+6. **Canonical message unchanged:** Do not alter `buildWalletMessage` / signed message text without API + SDK golden-test coordination.
+7. **Errors visible:** Terms fetch failure shows a clear alert; CTA must not silently enable.
+8. **redirect_uri:** Do not weaken open-redirect hardening; success redirect stays after acceptance.
+
+## Shared entry point
+
+Prefer `renderSignShell` in `web/src/signShell.ts` over duplicating markup in network pages. Network-specific wallet code stays in `web/src/pages/evm.ts` / `terra.ts` via `onSign`.
+
+## Tests to keep green
+
+- Unit: `web/src/signShell.test.ts` (XSS-as-text, consent gate, load error)
+- E2E: `web/e2e/sign-pages.spec.ts` (terms visible + gate on EVM/Terra)
+- E2E: `web/e2e/evm-sign.spec.ts` (consent then mock-wallet accept)
+
+## Out of scope unless asked
+
+- Solana / Telegram sign-page disclosure (reuse `renderSignShell` when ready)
+- i18n, full redesign, multi-wallet connectors
+- Treating the UI consent checkbox as authentication (server still requires a valid wallet signature)
