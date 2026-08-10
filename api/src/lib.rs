@@ -1,4 +1,5 @@
 pub mod account;
+pub mod auth;
 pub mod config;
 pub mod error;
 pub mod message;
@@ -34,7 +35,11 @@ pub async fn build_state(config: Config) -> anyhow::Result<AppState> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let rate_limit = RateLimitState::new(config.rate_limit_read, config.rate_limit_write);
+    let rate_limit = RateLimitState::new(
+        config.rate_limit_read,
+        config.rate_limit_write,
+        config.trusted_proxy_cidrs.clone(),
+    );
 
     let state = AppState {
         pool: pool.clone(),

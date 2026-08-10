@@ -240,6 +240,7 @@ dependencies = [
  "hmac",
  "http-body-util",
  "hyper",
+ "ipnet",
  "k256",
  "nonzero_ext",
  "reqwest",

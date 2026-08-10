@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod health;
 pub mod signatures;
 pub mod terms;
 pub mod update_terms;
@@ -25,6 +26,7 @@ pub fn build_router(state: AppState) -> Router {
     let static_dir = state.config.static_dir.clone();
 
     let mut app = Router::new()
+        .merge(health::routes())
         .merge(update_terms::routes())
         .nest("/api/v1", api)
         .nest("/admin", admin)

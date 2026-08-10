@@ -18,4 +18,9 @@ export {
   type SubmitResponse,
   type TermsLatest,
 } from "./types.js";
+export {
+  isAllowedRedirectUri,
+  sanitizeRedirectUri,
+  type RedirectAllowlistOptions,
+} from "./redirect.js";
 export { appendSignParams, buildSignUrl, type SignUrlOptions } from "./urls.js";

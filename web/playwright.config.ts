@@ -18,6 +18,8 @@ const e2eApiEnv: Record<string, string> = {
   TELEGRAM_BOT_TOKEN: "123456:ABC-DEF",
   RATE_LIMIT_READ: "1000",
   RATE_LIMIT_WRITE: "1000",
+  // No trusted proxies in e2e — XFF must not affect rate-limit buckets.
+  TRUSTED_PROXY_CIDRS: "",
   TERMS_GITLAB_RAW_URL:
     process.env.TERMS_GITLAB_RAW_URL ??
     "https://gitlab.com/PlasticDigits/cl8y-ecosystem-legal/-/raw/main/TERMS_AND_CONDITIONS.txt",
@@ -37,7 +39,7 @@ export default defineConfig({
       command:
         "sh -c 'if [ -x target/debug/cl8y-legal-api ]; then exec target/debug/cl8y-legal-api; else exec cargo run --quiet; fi'",
       cwd: apiDir,
-      url: "http://127.0.0.1:8080/update_terms",
+      url: "http://127.0.0.1:8080/health",
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
       env: {
@@ -54,6 +56,8 @@ export default defineConfig({
         ...process.env,
         VITE_API_BASE_URL: "",
         VITE_TELEGRAM_BOT_NAME: "",
+        VITE_REDIRECT_URI_ALLOWLIST: "https://cl8y.com",
+        VITE_ALLOW_LOCALHOST_REDIRECT: "true",
       },
     },
   ],
