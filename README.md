@@ -206,6 +206,8 @@ The package provides an API client, URL/poll helpers, and React components (`Ter
 
 Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests start the Rust API with `ADMIN_TOKEN=test-admin` and publish terms via authenticated `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
 
+**Coverage focus (GitLab [#4](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/4)):** **EVM** and **Terra Classic** wallet verify/submit/status are proven at unit, API integration, and Playwright e2e (mock wallets). **Portal** pages assert terms disclosure, consent gating, and `redirect_uri` allowlisting. Security ops from #3 (`/update_terms` Bearer, XFF trust, admin routes) have API unit + integration coverage; e2e global-setup uses Bearer sync. **Out of scope for #4:** new Telegram/Solana e2e, bot tests, OpenAPI — see [`skills/testing-coverage/SKILL.md`](skills/testing-coverage/SKILL.md) and related skills ([`terra-classic-adr036`](skills/terra-classic-adr036/SKILL.md), [`security-ops`](skills/security-ops/SKILL.md), [`portal-sign-disclosure`](skills/portal-sign-disclosure/SKILL.md)).
+
 ```bash
 source "$HOME/.cargo/env"
 cd api && cargo test
@@ -216,7 +218,7 @@ npm run test:web     # portal unit tests (builds SDK first via workspace)
 cd web && npm run test:e2e   # Playwright: API + Vite dev server; needs Postgres
 ```
 
-CI runs `test:clickwrap`, `test:web` (Vitest only), and `test:e2e` (Postgres service + full-stack Playwright) in [`.gitlab-ci.yml`](.gitlab-ci.yml).
+CI runs `test:rust`, `test:clickwrap`, `test:web` (Vitest), and `test:e2e` (Postgres + Chromium Playwright, 5 workers) in [`.gitlab-ci.yml`](.gitlab-ci.yml).
 
 ## Secret scanning (Gitleaks)
 

@@ -12,7 +12,7 @@ use tower_http::trace::TraceLayer;
 use crate::{config::Config, rate_limit::rate_limit_middleware, AppState};
 
 /// Cap JSON wallet/telegram submits (message + sig + pubkey). Legal messages are small.
-const MAX_REQUEST_BODY_BYTES: usize = 64 * 1024;
+pub const MAX_REQUEST_BODY_BYTES: usize = 64 * 1024;
 
 pub fn build_router(state: AppState) -> Router {
     let cors = build_cors(&state.config);

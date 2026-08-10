@@ -29,6 +29,8 @@ Prefer `renderSignShell` in `web/src/signShell.ts` over duplicating markup in ne
 
 ## Tests to keep green
 
+Full layer map: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md).
+
 - Unit: `web/src/signShell.test.ts` (XSS-as-text, consent gate, load error)
 - E2E: `web/e2e/sign-pages.spec.ts` (terms visible + gate on EVM/Terra)
 - E2E: `web/e2e/evm-sign.spec.ts` (consent then mock-wallet accept)

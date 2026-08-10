@@ -591,3 +591,138 @@ async fn integration_update_terms_requires_admin_bearer() {
         .unwrap();
     assert_eq!(admin_ok.status(), StatusCode::OK);
 }
+
+/// Issue #4: wallet POST bodies larger than the 64 KiB DefaultBodyLimit are rejected.
+#[tokio::test]
+async fn integration_wallet_rejects_oversized_body() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_wallet_rejects_oversized_body: {e}");
+            return;
+        }
+    };
+    let app = build_app(state);
+
+    let oversized = "x".repeat(cl8y_legal_api::routes::MAX_REQUEST_BODY_BYTES + 1);
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/signatures/wallet")
+                .header("content-type", "application/json")
+                .body(Body::from(oversized))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+/// Issue #4: EVM cross-property replay / wrong-account bind rejected at HTTP layer.
+#[tokio::test]
+async fn integration_evm_rejects_cross_property_replay() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_evm_rejects_cross_property_replay: {e}");
+            return;
+        }
+    };
+
+    reset_db(&state.pool).await;
+    publish_fixture_terms(&state.pool).await;
+    let app = build_app(state);
+
+    let key = SigningKey::from_slice(&[0x22u8; 32]).unwrap();
+    let address = {
+        use k256::ecdsa::VerifyingKey;
+        let vk = VerifyingKey::from(&key);
+        let pubkey = vk.to_encoded_point(false);
+        let mut hasher = Keccak256::new();
+        hasher.update(&pubkey.as_bytes()[1..]);
+        let digest: [u8; 32] = hasher.finalize().into();
+        format!("0x{}", hex::encode(&digest[12..]))
+    };
+    let ts = Utc::now();
+    let property_a = "evm-a.example.com";
+    let property_b = "evm-b.example.com";
+
+    for property in [property_a, property_b] {
+        let _ = body_json(
+            app.clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/api/v1/terms/latest?property={property}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap()
+                .into_body(),
+        )
+        .await;
+    }
+
+    let terms: serde_json::Value = body_json(
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/v1/terms/latest?property={property_a}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .into_body(),
+    )
+    .await;
+    let effective =
+        chrono::NaiveDate::parse_from_str(terms["effective_date"].as_str().unwrap(), "%Y-%m-%d")
+            .expect("effective_date");
+    let version = terms["version_label"].as_str().unwrap();
+
+    let message_a = build_wallet_message(version, effective, property_a, "EVM", &address, ts);
+    let signature_a = eip191_sign(&key, &message_a);
+    let message_b = build_wallet_message(version, effective, property_b, "EVM", &address, ts);
+    assert_ne!(message_a, message_b);
+
+    let replay = post_wallet(
+        app.clone(),
+        serde_json::json!({
+            "property": property_b,
+            "network": "EVM",
+            "account_id": address,
+            "message": message_b,
+            "signature": signature_a,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(replay, StatusCode::BAD_REQUEST);
+
+    let other = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+    let wrong_account = post_wallet(
+        app,
+        serde_json::json!({
+            "property": property_a,
+            "network": "EVM",
+            "account_id": other,
+            "message": build_wallet_message(version, effective, property_a, "EVM", other, ts),
+            "signature": signature_a,
+            "client_timestamp": ts.to_rfc3339(),
+        }),
+    )
+    .await;
+    assert_eq!(wrong_account, StatusCode::BAD_REQUEST);
+}

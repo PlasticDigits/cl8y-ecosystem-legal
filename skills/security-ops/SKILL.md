@@ -9,7 +9,7 @@ description: >-
 
 # Security ops (portal + API)
 
-Cross-links: GitLab issue **#3**, gap items **4–7** in [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md), env templates [`.env.example`](../../.env.example) / [`web/.env.example`](../../web/.env.example), root [`README.md`](../../README.md).
+Cross-links: GitLab issue **#3**, gap items **4–7** in [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md), env templates [`.env.example`](../../.env.example) / [`web/.env.example`](../../web/.env.example), root [`README.md`](../../README.md). Tests: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md).
 
 ## Invariants (do not regress)
 
