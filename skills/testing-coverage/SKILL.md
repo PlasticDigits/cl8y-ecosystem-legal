@@ -80,6 +80,7 @@ Proves **HTTP routes + DB** with real Axum stack and fixture keys.
 | Terra ADR-036 happy path | wallet submit → `signed_latest` | `integration_terra_classic_adr036_wallet_submit` |
 | Terra abuse | cross-property replay, tampered message, wrong pubkey, timestamp skew | `integration_terra_classic_adr036_rejects_abuse` |
 | Admin / sync auth | unauth + bad Bearer → 401 on `/update_terms` and `/admin/*`; valid Bearer → 200; `/health` public | `integration_update_terms_requires_admin_bearer` |
+| Admin register property | unauth `POST /admin/properties` → 401; Bearer upserts hostname (+ display_name); list contains property | `integration_admin_register_property_requires_bearer_and_upserts` |
 | Oversized body | wallet POST > 64 KiB → 413 | `integration_wallet_rejects_oversized_body` |
 
 Requires `DATABASE_URL` (Postgres). Tests skip gracefully if DB unavailable.

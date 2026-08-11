@@ -602,6 +602,105 @@ async fn integration_update_terms_requires_admin_bearer() {
     assert_eq!(admin_ok.status(), StatusCode::OK);
 }
 
+#[tokio::test]
+async fn integration_admin_register_property_requires_bearer_and_upserts() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_admin_register_property_requires_bearer_and_upserts: {e}");
+            return;
+        }
+    };
+    let app = build_app(state);
+
+    let unauth = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/admin/properties")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"property":"dex.cl8y.com","display_name":"CL8Y DEX"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(unauth.status(), StatusCode::UNAUTHORIZED);
+
+    let created = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/admin/properties")
+                .header("authorization", "Bearer test-admin")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"property":"dex.cl8y.com","display_name":"CL8Y DEX"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let created_body = axum::body::to_bytes(created.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let created_json: serde_json::Value = serde_json::from_slice(&created_body).unwrap();
+    assert_eq!(created_json["kind"], "website");
+    assert_eq!(created_json["identifier"], "dex.cl8y.com");
+    assert_eq!(created_json["display_name"], "CL8Y DEX");
+
+    // Idempotent upsert keeps display_name when omitted.
+    let again = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/admin/properties")
+                .header("authorization", "Bearer test-admin")
+                .header("content-type", "application/json")
+                .body(Body::from(r#"{"property":"https://DEX.cl8y.com/path"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(again.status(), StatusCode::OK);
+    let again_body = axum::body::to_bytes(again.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let again_json: serde_json::Value = serde_json::from_slice(&again_body).unwrap();
+    assert_eq!(again_json["identifier"], "dex.cl8y.com");
+    assert_eq!(again_json["display_name"], "CL8Y DEX");
+
+    let listed = app
+        .oneshot(
+            Request::builder()
+                .uri("/admin/properties")
+                .header("authorization", "Bearer test-admin")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(listed.status(), StatusCode::OK);
+    let listed_body = axum::body::to_bytes(listed.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let listed_json: serde_json::Value = serde_json::from_slice(&listed_body).unwrap();
+    assert!(
+        listed_json
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["identifier"] == "dex.cl8y.com"),
+        "registered property missing from list: {listed_json}"
+    );
+}
+
 /// Issue #4: wallet POST bodies larger than the 64 KiB DefaultBodyLimit are rejected.
 #[tokio::test]
 async fn integration_wallet_rejects_oversized_body() {

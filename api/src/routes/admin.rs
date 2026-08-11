@@ -4,7 +4,7 @@ use axum::{
     routing::{delete, get},
     Json, Router,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     auth::require_admin,
@@ -15,7 +15,7 @@ use crate::{
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/properties", get(list_properties))
+        .route("/properties", get(list_properties).post(register_property))
         .route("/properties/{kind}/{identifier}", delete(delete_property))
 }
 
@@ -25,6 +25,20 @@ pub struct PropertyListItem {
     pub identifier: String,
     pub display_name: Option<String>,
     pub created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegisterPropertyBody {
+    /// Website hostname (e.g. `dex.cl8y.com`) or Telegram channel chat_id (negative).
+    pub property: String,
+    pub display_name: Option<String>,
+}
+
+fn kind_label(kind: PropertyKind) -> String {
+    match kind {
+        PropertyKind::Website => "website".to_string(),
+        PropertyKind::TelegramChannel => "telegram_channel".to_string(),
+    }
 }
 
 async fn list_properties(
@@ -42,10 +56,7 @@ async fn list_properties(
         rows.into_iter()
             .map(
                 |(kind, identifier, display_name, created_at)| PropertyListItem {
-                    kind: match kind {
-                        PropertyKind::Website => "website".to_string(),
-                        PropertyKind::TelegramChannel => "telegram_channel".to_string(),
-                    },
+                    kind: kind_label(kind),
                     identifier,
                     display_name,
                     created_at: created_at.to_rfc3339(),
@@ -53,6 +64,51 @@ async fn list_properties(
             )
             .collect(),
     ))
+}
+
+/// Upsert a property (website hostname or Telegram chat_id). Requires admin Bearer.
+async fn register_property(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<RegisterPropertyBody>,
+) -> AppResult<Json<PropertyListItem>> {
+    require_admin(&headers, &state.config.admin_token)?;
+    let (kind, identifier) =
+        normalize_property(&body.property, state.config.allow_localhost_property)?;
+    let display_name = body
+        .display_name
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    let (kind, identifier, display_name, created_at) = sqlx::query_as::<
+        _,
+        (
+            PropertyKind,
+            String,
+            Option<String>,
+            chrono::DateTime<chrono::Utc>,
+        ),
+    >(
+        r#"
+        INSERT INTO properties (kind, identifier, display_name)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (kind, identifier) DO UPDATE SET
+            display_name = COALESCE(EXCLUDED.display_name, properties.display_name)
+        RETURNING kind, identifier, display_name, created_at
+        "#,
+    )
+    .bind(kind)
+    .bind(&identifier)
+    .bind(&display_name)
+    .fetch_one(&state.pool)
+    .await?;
+
+    Ok(Json(PropertyListItem {
+        kind: kind_label(kind),
+        identifier,
+        display_name,
+        created_at: created_at.to_rfc3339(),
+    }))
 }
 
 async fn delete_property(

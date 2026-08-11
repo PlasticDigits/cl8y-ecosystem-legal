@@ -17,7 +17,7 @@ Cross-links: GitLab issues **[#3](https://gitlab.com/plasticdigits/cl8y-ecosyste
 
 1. **`POST /update_terms` is authenticated.** Requires `Authorization: Bearer <ADMIN_TOKEN>`. Unauthenticated → **401**. No public GET sync trigger. Auth runs **before** the 1 req/s ops rate limit (unauth floods must not exhaust the admin bucket).
 2. **Unattended sync is startup + interval worker**, not the HTTP route (`TERMS_SYNC_ON_STARTUP`, `TERMS_SYNC_INTERVAL_HOURS`).
-3. **One Bearer scheme.** Reuse `ADMIN_TOKEN` for `/admin/*` and `/update_terms`. Do not invent a second ad-hoc token without docs + issue update.
+3. **One Bearer scheme.** Reuse `ADMIN_TOKEN` for `/admin/*` and `/update_terms`. Do not invent a second ad-hoc token without docs + issue update. Ops scripts that hit admin routes (`scripts/register-property.sh`) must prompt for the token interactively (hidden password) and must **not** read `ADMIN_TOKEN` from the environment.
 4. **`ADMIN_TOKEN` fail-fast.** Missing/empty/known-default `dev-admin-token` refuses boot unless `ALLOW_INSECURE_DEFAULTS=true` (local/dev only; never silent default in prod).
 5. **Constant-time Bearer compare** via `api/src/auth.rs` (`subtle`). Keep admin checks there.
 6. **`redirect_uri` allowlist on the portal.** `web/src/ui.ts` → `safeRedirectUri` / SDK `sanitizeRedirectUri`. Reject `javascript:`, `data:`, protocol-relative, userinfo; HTTPS-only except loopback when `VITE_ALLOW_LOCALHOST_REDIRECT` is on. Invalid URI → show success, **no** navigation.
@@ -45,12 +45,12 @@ Cross-links: GitLab issues **[#3](https://gitlab.com/plasticdigits/cl8y-ecosyste
 | Publish / reactivate | `api/src/terms.rs` |
 | Canonical acceptance message | `api/src/message.rs`, `packages/cl8y-clickwrap/src/message.ts` |
 | Portal message builders | `web/src/pages/evm.ts`, `terra.ts`, `solana.ts` |
-| Admin routes | `api/src/routes/admin.rs` |
+| Admin routes | `api/src/routes/admin.rs` (`GET/POST /admin/properties`, `DELETE …/{kind}/{identifier}`) |
 | Health | `api/src/routes/health.rs` |
 | Portal sanitize | `web/src/redirect.ts`, `web/src/ui.ts` |
 | SDK helpers | `packages/cl8y-clickwrap/src/redirect.ts` |
 | E2E sync | `web/e2e/global-setup.ts` (sends Bearer) |
-| Ops curl helper | `scripts/publish-terms.sh` |
+| Ops curl helpers | `scripts/publish-terms.sh`, `scripts/register-property.sh` (interactive hidden token; ignores `ADMIN_TOKEN` env) |
 
 ## Agent checklist
 
