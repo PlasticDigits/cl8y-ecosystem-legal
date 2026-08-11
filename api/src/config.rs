@@ -13,6 +13,9 @@ pub struct Config {
     pub terms_gitlab_raw_url: String,
     pub terms_sync_interval_hours: u64,
     pub terms_sync_on_startup: bool,
+    /// When true, sync may re-mark a previously published label as `is_latest` (rollback).
+    /// Dev/ops escape hatch only — never enable silently in production.
+    pub force_terms_downgrade: bool,
     pub admin_token: String,
     /// When true, missing `ADMIN_TOKEN` may fall back to [`INSECURE_DEFAULT_ADMIN_TOKEN`].
     pub allow_insecure_defaults: bool,
@@ -50,6 +53,7 @@ impl Config {
             terms_sync_on_startup: env::var("TERMS_SYNC_ON_STARTUP")
                 .map(|v| v != "false" && v != "0")
                 .unwrap_or(true),
+            force_terms_downgrade: env_flag("FORCE_TERMS_DOWNGRADE", false),
             admin_token,
             allow_insecure_defaults,
             telegram_bot_token: env::var("TELEGRAM_BOT_TOKEN").ok().filter(|s| !s.is_empty()),

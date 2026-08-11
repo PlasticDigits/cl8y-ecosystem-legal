@@ -48,7 +48,13 @@ pub async fn build_state(config: Config) -> anyhow::Result<AppState> {
     };
 
     if config.terms_sync_on_startup {
-        match terms::sync_terms_from_url(&pool, &config.terms_gitlab_raw_url).await {
+        match terms::sync_terms_from_url(
+            &pool,
+            &config.terms_gitlab_raw_url,
+            config.force_terms_downgrade,
+        )
+        .await
+        {
             Ok(outcome) => tracing::info!(
                 version = %outcome.version_label(),
                 "startup terms sync: {:?}",

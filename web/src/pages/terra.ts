@@ -79,6 +79,7 @@ export async function renderTerra(root: HTMLElement) {
       const message = buildWalletMessage({
         versionLabel: terms.version_label,
         effectiveDate: terms.effective_date,
+        contentSha256: terms.content_sha256,
         property: terms.property,
         network: "TERRA_CLASSIC",
         accountId,
