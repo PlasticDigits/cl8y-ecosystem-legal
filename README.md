@@ -133,6 +133,17 @@ curl -X POST https://api.terms.cl8y.com/update_terms \
 # or {"status":"published","version_label":"Draft 1.4",...}
 ```
 
+### Register a property (ops)
+
+Website hostnames (and Telegram chat ids) can still be auto-upserted by public terms/status traffic, but operators should register production properties explicitly:
+
+```bash
+./scripts/register-property.sh dex.cl8y.com "CL8Y DEX"
+./scripts/register-property.sh --list
+```
+
+The script prompts for `ADMIN_TOKEN` as a **hidden password** (it ignores `ADMIN_TOKEN` from the environment). API: authenticated `POST /admin/properties` with JSON `{ "property": "dex.cl8y.com", "display_name": "…" }`.
+
 Liveness: `GET /health` → `{"status":"ok"}` (no auth; safe for load balancers / Playwright readiness).
 
 ### Security ops invariants
