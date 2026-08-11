@@ -7,7 +7,10 @@ use uuid::Uuid;
 
 use crate::error::{AppError, AppResult};
 
-pub use sync::{fetch_terms_from_url, parse_version_line_2, sync_terms_from_url, TermsSyncOutcome};
+pub use sync::{
+    fetch_terms_from_url, parse_version_line_2, plan_terms_sync, sync_terms_content,
+    sync_terms_from_url, TermsSyncOutcome, TermsSyncPlan, MAX_TERMS_BYTES,
+};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct TermsVersion {
@@ -109,6 +112,28 @@ pub async fn publish_terms(pool: &PgPool, parsed: ParsedTermsFile) -> AppResult<
     Ok(row)
 }
 
+/// Flip `is_latest` to an existing row (force-downgrade path only). Does not mutate stored bytes.
+pub async fn set_latest_by_label(pool: &PgPool, label: &str) -> AppResult<TermsVersion> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query("UPDATE terms_versions SET is_latest = FALSE WHERE is_latest = TRUE")
+        .execute(&mut *tx)
+        .await?;
+
+    let row = sqlx::query_as::<_, TermsVersion>(
+        r#"UPDATE terms_versions SET is_latest = TRUE
+           WHERE version_label = $1
+           RETURNING id, version_label, effective_date, content_sha256, content_text, published_at, is_latest"#,
+    )
+    .bind(label)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or_else(|| AppError::NotFound(format!("terms version {label}")))?;
+
+    tx.commit().await?;
+    Ok(row)
+}
+
 pub async fn publish_from_path(pool: &PgPool, path: &str) -> AppResult<TermsVersion> {
     let content = std::fs::read_to_string(path)
         .map_err(|e| AppError::Internal(anyhow::anyhow!("read terms file: {e}")))?;
@@ -116,6 +141,10 @@ pub async fn publish_from_path(pool: &PgPool, path: &str) -> AppResult<TermsVers
     publish_terms(pool, parsed).await
 }
 
-pub async fn bootstrap_from_gitlab(pool: &PgPool, url: &str) -> AppResult<TermsSyncOutcome> {
-    sync_terms_from_url(pool, url).await
+pub async fn bootstrap_from_gitlab(
+    pool: &PgPool,
+    url: &str,
+    force_downgrade: bool,
+) -> AppResult<TermsSyncOutcome> {
+    sync_terms_from_url(pool, url, force_downgrade).await
 }

@@ -10,6 +10,7 @@ describe("acceptance message", () => {
     const msg = buildAcceptanceMessage({
       versionLabel: "Draft 1.3",
       effectiveDate: "2026-05-26",
+      contentSha256: "abc123def456",
       property: "cl8y.com",
       network: "EVM",
       accountId: "0xabc",
@@ -23,6 +24,7 @@ describe("acceptance message", () => {
     expect(msg).toContain("Property: cl8y.com");
     expect(msg).toContain("Network: EVM");
     expect(msg).toContain("Account: 0xabc");
+    expect(msg).toContain("Content-SHA256: abc123def456");
     expect(msg).toContain("Accepted at (UTC): 2026-05-26T12:00:00Z");
   });
 
@@ -30,6 +32,7 @@ describe("acceptance message", () => {
     const params = {
       versionLabel: "Draft 1.3",
       effectiveDate: "2026-05-26",
+      contentSha256: "deadbeef",
       property: "cl8y.com",
       network: "EVM",
       accountId: "0xabc",
@@ -42,6 +45,7 @@ describe("acceptance message", () => {
     const msg = buildAcceptanceMessage({
       versionLabel: "Draft 1.3",
       effectiveDate: "2026-05-26",
+      contentSha256: "deadbeef",
       property: "cl8y.com",
       network: "EVM",
       accountId: "0xabc",
@@ -54,6 +58,7 @@ describe("acceptance message", () => {
       "Property: cl8y.com\n" +
       "Network: EVM\n" +
       "Account: 0xabc\n" +
+      "Content-SHA256: deadbeef\n" +
       "Accepted at (UTC): 2026-05-26T12:00:00Z";
     expect(msg).toBe(expected);
   });

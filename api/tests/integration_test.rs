@@ -2,7 +2,10 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use chrono::Utc;
 use cl8y_legal_api::{
-    build_app, build_state, config::Config, message::build_wallet_message, terms::publish_from_path,
+    build_app, build_state,
+    config::Config,
+    message::build_wallet_message,
+    terms::{publish_from_path, sync_terms_content, TermsSyncOutcome},
 };
 use http_body_util::BodyExt;
 use k256::ecdsa::SigningKey;
@@ -21,6 +24,7 @@ fn test_config(database_url: &str) -> Config {
         terms_gitlab_raw_url: "https://gitlab.com/PlasticDigits/cl8y-ecosystem-legal/-/raw/main/TERMS_AND_CONDITIONS.txt".into(),
         terms_sync_interval_hours: 4,
         terms_sync_on_startup: false,
+        force_terms_downgrade: false,
         admin_token: "test-admin".into(),
         allow_insecure_defaults: false,
         telegram_bot_token: Some("123456:ABC-DEF".into()),
@@ -129,6 +133,7 @@ async fn integration_property_scoped_signatures() {
         let message = build_wallet_message(
             terms["version_label"].as_str().unwrap(),
             effective,
+            terms["content_sha256"].as_str().unwrap(),
             property,
             "EVM",
             address,
@@ -320,6 +325,7 @@ async fn integration_terra_classic_adr036_wallet_submit() {
     let message = build_wallet_message(
         terms["version_label"].as_str().unwrap(),
         effective,
+        terms["content_sha256"].as_str().unwrap(),
         property,
         "TERRA_CLASSIC",
         &address,
@@ -420,10 +426,12 @@ async fn integration_terra_classic_adr036_rejects_abuse() {
         chrono::NaiveDate::parse_from_str(terms["effective_date"].as_str().unwrap(), "%Y-%m-%d")
             .expect("effective_date");
     let version = terms["version_label"].as_str().unwrap();
+    let content_sha256 = terms["content_sha256"].as_str().unwrap();
 
     let message_a = build_wallet_message(
         version,
         effective,
+        content_sha256,
         property_a,
         "TERRA_CLASSIC",
         &address,
@@ -434,6 +442,7 @@ async fn integration_terra_classic_adr036_rejects_abuse() {
     let message_b = build_wallet_message(
         version,
         effective,
+        content_sha256,
         property_b,
         "TERRA_CLASSIC",
         &address,
@@ -490,6 +499,7 @@ async fn integration_terra_classic_adr036_rejects_abuse() {
     let skewed_msg = build_wallet_message(
         version,
         effective,
+        content_sha256,
         property_a,
         "TERRA_CLASSIC",
         &address,
@@ -691,10 +701,11 @@ async fn integration_evm_rejects_cross_property_replay() {
         chrono::NaiveDate::parse_from_str(terms["effective_date"].as_str().unwrap(), "%Y-%m-%d")
             .expect("effective_date");
     let version = terms["version_label"].as_str().unwrap();
+    let content_sha256 = terms["content_sha256"].as_str().unwrap();
 
-    let message_a = build_wallet_message(version, effective, property_a, "EVM", &address, ts);
+    let message_a = build_wallet_message(version, effective, content_sha256, property_a, "EVM", &address, ts);
     let signature_a = eip191_sign(&key, &message_a);
-    let message_b = build_wallet_message(version, effective, property_b, "EVM", &address, ts);
+    let message_b = build_wallet_message(version, effective, content_sha256, property_b, "EVM", &address, ts);
     assert_ne!(message_a, message_b);
 
     let replay = post_wallet(
@@ -718,11 +729,88 @@ async fn integration_evm_rejects_cross_property_replay() {
             "property": property_a,
             "network": "EVM",
             "account_id": other,
-            "message": build_wallet_message(version, effective, property_a, "EVM", other, ts),
+            "message": build_wallet_message(version, effective, content_sha256, property_a, "EVM", other, ts),
             "signature": signature_a,
             "client_timestamp": ts.to_rfc3339(),
         }),
     )
     .await;
     assert_eq!(wrong_account, StatusCode::BAD_REQUEST);
+}
+
+/// Issue #6: hash-aware sync, label-bump required on body change, anti-downgrade.
+#[tokio::test]
+async fn integration_terms_oracle_sync_policy() {
+    let _guard = DB_LOCK.lock().await;
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal".into());
+
+    let config = test_config(&database_url);
+    let state = match build_state(config).await {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("SKIP integration_terms_oracle_sync_policy: {e}");
+            return;
+        }
+    };
+
+    reset_db(&state.pool).await;
+
+    let v13 = "CL8Y ECOSYSTEM TERMS AND CONDITIONS\nVersion: Draft 1.3\nEffective date: May 26, 2026\nbody-a\n";
+    let v14 = "CL8Y ECOSYSTEM TERMS AND CONDITIONS\nVersion: Draft 1.4\nEffective date: May 26, 2026\nbody-b\n";
+    let v13_mutated = "CL8Y ECOSYSTEM TERMS AND CONDITIONS\nVersion: Draft 1.3\nEffective date: May 26, 2026\nbody-MUTATED\n";
+
+    let first = sync_terms_content(&state.pool, v13, false)
+        .await
+        .expect("first publish");
+    assert!(matches!(
+        first,
+        TermsSyncOutcome::Published {
+            version_label: ref l,
+            ..
+        } if l == "Draft 1.3"
+    ));
+
+    let same = sync_terms_content(&state.pool, v13, false)
+        .await
+        .expect("identical sync");
+    assert_eq!(
+        same,
+        TermsSyncOutcome::Unchanged {
+            version_label: "Draft 1.3".into()
+        }
+    );
+
+    let mutated = sync_terms_content(&state.pool, v13_mutated, false).await;
+    assert!(mutated.is_err(), "same label + different body must fail");
+    assert!(mutated
+        .unwrap_err()
+        .to_string()
+        .contains("without a label bump"));
+
+    let newer = sync_terms_content(&state.pool, v14, false)
+        .await
+        .expect("new label publish");
+    assert!(matches!(
+        newer,
+        TermsSyncOutcome::Published {
+            version_label: ref l,
+            ..
+        } if l == "Draft 1.4"
+    ));
+
+    let rollback = sync_terms_content(&state.pool, v13, false).await;
+    assert!(rollback.is_err(), "downgrade without force must fail");
+    assert!(rollback.unwrap_err().to_string().contains("rollback"));
+
+    let forced = sync_terms_content(&state.pool, v13, true)
+        .await
+        .expect("force downgrade");
+    assert!(matches!(
+        forced,
+        TermsSyncOutcome::Published {
+            version_label: ref l,
+            ..
+        } if l == "Draft 1.3"
+    ));
 }

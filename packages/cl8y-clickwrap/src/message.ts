@@ -10,9 +10,17 @@ export function formatEffectiveDate(effectiveDate: string): string {
   });
 }
 
+/**
+ * Canonical acceptance text — must stay byte-identical with
+ * `api/src/message.rs` (`build_acceptance_message`).
+ *
+ * `contentSha256` binds the signature to the exact published terms bytes
+ * (hex from `GET /api/v1/terms/latest` → `content_sha256`).
+ */
 export function buildAcceptanceMessage(params: {
   versionLabel: string;
   effectiveDate: string;
+  contentSha256: string;
   property: string;
   network: string;
   accountId: string;
@@ -27,6 +35,7 @@ export function buildAcceptanceMessage(params: {
     `Property: ${params.property}\n` +
     `Network: ${params.network}\n` +
     `Account: ${params.accountId}\n` +
+    `Content-SHA256: ${params.contentSha256}\n` +
     `Accepted at (UTC): ${iso}`
   );
 }

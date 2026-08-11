@@ -110,7 +110,7 @@ E2E uses **Chromium only**, `workers: 5`, mock `window.ethereum` / `window.keplr
 7. **Consent before sign** — e2e full-sign specs use `acceptViaConsent` (checkbox + Connect & sign); aligns with `portal-sign-disclosure`.
 8. **Redirect hardening** — evil `redirect_uri` must not navigate; success UI still shown. Portal + SDK share allowlist semantics.
 9. **XFF untrusted in e2e** — `TRUSTED_PROXY_CIDRS: ""` in Playwright API env; spoofed XFF must not split rate buckets (unit-tested).
-10. **Canonical message golden** — Rust + SDK message tests stay aligned when changing `buildWalletMessage`.
+10. **Canonical message golden** — Rust + SDK message tests stay aligned when changing `buildWalletMessage` (must include `Content-SHA256`; see GitLab #6 / `security-ops`).
 11. **Do not require Telegram/Solana e2e** for closing #4 — leave `telegram-config.spec.ts` minimal; Solana verify mismatch remains a separate P0.
 12. **MR pipelines run full test matrix** — `.gitlab-ci.yml` `workflow:rules` ensures `test:rust`, `test:web`, `test:e2e` on MRs (not gitleaks-only).
 

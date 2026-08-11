@@ -114,7 +114,12 @@ Then open http://localhost:8080.
 
 ### Terms updates (from GitLab)
 
-The API loads terms from the GitLab raw file on `main` ([`TERMS_AND_CONDITIONS.txt`](https://gitlab.com/PlasticDigits/cl8y-ecosystem-legal/-/raw/main/TERMS_AND_CONDITIONS.txt)). It compares **line 2** (`Version: …`) to the current latest version and publishes only when that version changes.
+The API loads terms from the GitLab raw file on `main` ([`TERMS_AND_CONDITIONS.txt`](https://gitlab.com/PlasticDigits/cl8y-ecosystem-legal/-/raw/main/TERMS_AND_CONDITIONS.txt)). Sync is **content-hash aware** (see GitLab [#6](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/6) and [`skills/security-ops/SKILL.md`](skills/security-ops/SKILL.md) § Terms oracle):
+
+- Same `Version:` **and** same `content_sha256` → `unchanged` (no duplicate publish).
+- Same `Version:` with a **different body** → **rejected**; operators must bump `Version:` (hash is the safety net, not a substitute for labeling discipline).
+- A previously published label cannot become `is_latest` again unless `FORCE_TERMS_DOWNGRADE=true` (dev/ops only; logged).
+- Acceptance messages bind `Content-SHA256: <hex>` (API + SDK + portal must deploy together — **breaking** message format).
 
 - **On startup** (if `TERMS_SYNC_ON_STARTUP=true`) — primary unattended path
 - **Every 4 hours** (`TERMS_SYNC_INTERVAL_HOURS`, default `4`) — primary unattended path
@@ -138,6 +143,8 @@ Documented for operators and agents in [`skills/security-ops/SKILL.md`](skills/s
 |---------|----------|
 | `ADMIN_TOKEN` | Required at boot. Refuses known default `dev-admin-token` unless `ALLOW_INSECURE_DEFAULTS=true` (local/CI only). |
 | `/update_terms` | Bearer admin auth; POST-only. |
+| Terms oracle | Hash-aware sync; reject label reuse / silent drift; anti-downgrade unless `FORCE_TERMS_DOWNGRADE`. |
+| Acceptance message | Binds `Content-SHA256` (coordinated API+SDK+web release). |
 | Admin Bearer compare | Constant-time (`subtle`). |
 | `redirect_uri` | Portal allowlists origins via `VITE_REDIRECT_URI_ALLOWLIST` (+ optional localhost). Unsafe URIs never auto-navigate. |
 | Rate-limit IP | TCP peer by default. `TRUSTED_PROXY_CIDRS` enables XFF; **rightmost** valid hop is used. |

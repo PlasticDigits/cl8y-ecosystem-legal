@@ -6,6 +6,8 @@
 //! - Auth is checked **before** the 1 req/s rate limit so unauthenticated floods
 //!   return 401 without exhausting the ops bucket or hitting GitLab/DB publish.
 //! - Unattended sync remains `TERMS_SYNC_ON_STARTUP` + interval worker — not this route.
+//! - Sync is hash-aware / anti-downgrade (see `terms::sync`); `FORCE_TERMS_DOWNGRADE` is
+//!   the only rollback escape hatch.
 
 use axum::{
     extract::{Request, State},
@@ -31,6 +33,11 @@ async fn update_terms(
     require_admin(req.headers(), &state.config.admin_token)?;
     let ip = state.rate_limit.client_ip(&req);
     state.rate_limit.check_update_terms(ip)?;
-    let outcome = sync_terms_from_url(&state.pool, &state.config.terms_gitlab_raw_url).await?;
+    let outcome = sync_terms_from_url(
+        &state.pool,
+        &state.config.terms_gitlab_raw_url,
+        state.config.force_terms_downgrade,
+    )
+    .await?;
     Ok(Json(outcome))
 }
