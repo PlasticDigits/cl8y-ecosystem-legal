@@ -47,4 +47,4 @@ Cross-links: GitLab issue **#3**, gap items **4–7** in [`gaps/GAP_1786322222.m
 
 ## Out of scope here
 
-Telegram/Solana/Terra crypto fixes, bot kick semantics, property auto-upsert allowlisting (see other issues / gap P0–P1 items).
+Telegram/Solana/Terra crypto fixes, bot kick semantics (see [`skills/bot-enforcement/SKILL.md`](../bot-enforcement/SKILL.md) / GitLab #5), property auto-upsert allowlisting (see other issues / gap P0–P1 items).

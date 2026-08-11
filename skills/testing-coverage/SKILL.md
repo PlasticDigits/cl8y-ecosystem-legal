@@ -3,8 +3,9 @@ name: testing-coverage
 description: >-
   EVM, Terra Classic, and web portal test coverage invariants for CL8Y Legal
   (GitLab issue #4). Use when adding or changing unit/integration/e2e tests,
-  Playwright config, CI test jobs, or global-setup terms sync. Out of scope:
-  new Telegram/Solana e2e, bot tests, OpenAPI.
+  Playwright config, CI test jobs, or global-setup terms sync. Out of scope for #4:
+  new Telegram/Solana e2e, OpenAPI. Bot fail-closed unit tests live under GitLab #5
+  ([`skills/bot-enforcement/SKILL.md`](../bot-enforcement/SKILL.md)).
 ---
 
 # Testing coverage (EVM, Terra Classic, portal)
@@ -19,7 +20,7 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 |----------|--------------|
 | EVM wallet verify / submit / status | New Telegram e2e or WebApp HMAC fixes |
 | Terra Classic ADR-036 verify / submit / status | New Solana e2e or envelope-alignment work |
-| Portal pages (`/`, `/sign/evm`, `/sign/terra-classic`) | Bot `cargo test` / enforcement e2e |
+| Portal pages (`/`, `/sign/evm`, `/sign/terra-classic`) | Bot enforcement e2e (unit tests: see #5 / `bot-enforcement`) |
 | Shared `web/src/{ui,query,redirect,signShell}.ts` | OpenAPI generation |
 | API `POST /update_terms` auth, admin Bearer | Real Keplr / MetaMask extensions in CI |
 | `ADMIN_TOKEN` fail-fast (`config.rs`) | Firefox / WebKit Playwright matrix |
@@ -33,6 +34,7 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 | Terra ADR-036 invariants | [`skills/terra-classic-adr036/SKILL.md`](../terra-classic-adr036/SKILL.md) |
 | Security ops (auth, XFF, redirect) | [`skills/security-ops/SKILL.md`](../security-ops/SKILL.md) |
 | Portal terms disclosure | [`skills/portal-sign-disclosure/SKILL.md`](../portal-sign-disclosure/SKILL.md) |
+| Bot fail-closed compliance (#5) | [`skills/bot-enforcement/SKILL.md`](../bot-enforcement/SKILL.md) |
 | Gap analysis § Testing | [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) |
 | Run commands | [`README.md`](../../README.md#tests) |
 | CI jobs | [`.gitlab-ci.yml`](../../.gitlab-ci.yml) |
@@ -134,6 +136,9 @@ When adding or changing tests for this issue:
 cd api && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 cd api && cargo test
 
+# Bot unit / fail-closed compliance (GitLab #5 — see bot-enforcement skill)
+cd bot && cargo test
+
 # Web + SDK unit (root workspaces)
 npm ci && npm run test:sdk && npm run test:web
 
@@ -144,7 +149,7 @@ cd web && npm run test:e2e
 cd web && npm run test:e2e -- evm-sign terra-sign redirect sign-pages
 ```
 
-CI mirrors: `test:rust`, `test:clickwrap`, `test:web`, `test:e2e` in [`.gitlab-ci.yml`](../../.gitlab-ci.yml).
+CI mirrors: `test:rust`, `test:rust-bot`, `test:clickwrap`, `test:web`, `test:e2e` in [`.gitlab-ci.yml`](../../.gitlab-ci.yml).
 
 ## Acceptance criteria → test artifacts
 
@@ -179,4 +184,4 @@ Maps GitLab #4 acceptance criteria to concrete tests (close #4 when all rows are
 
 **Proven in CI today:** EVM and Terra Classic wallet paths from crypto verify through DB status; portal terms disclosure and consent on EVM/Terra sign pages; admin Bearer on `/update_terms` and `/admin/*`; redirect allowlist; XFF trust policy; authenticated e2e global-setup.
 
-**Explicit non-goals (#4):** Telegram WebApp HMAC, Solana envelope alignment, bot enforcement tests, OpenAPI, real-wallet extension smoke, multi-browser matrix.
+**Explicit non-goals (#4):** Telegram WebApp HMAC, Solana envelope alignment, OpenAPI, real-wallet extension smoke, multi-browser matrix. Bot fail-closed unit tests are owned by [#5](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/5) / [`bot-enforcement`](../bot-enforcement/SKILL.md).

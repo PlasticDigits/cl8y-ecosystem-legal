@@ -4,6 +4,7 @@ use tracing::{info, warn};
 
 use crate::{
     api_client::LegalApi,
+    compliance::{classify_status, ComplianceAction, ComplianceCheck},
     config::Config,
     db,
     messages::{
@@ -48,11 +49,17 @@ pub async fn handle_member_joined(
         return Ok(());
     }
 
-    match api.is_signed_latest(chat_id.0, user_id).await {
-        Ok(true) => {
+    let check = classify_status(
+        api.is_signed_latest(chat_id.0, user_id).await,
+        chat_id.0,
+        user_id,
+        "handle_member_joined",
+    );
+    match check {
+        ComplianceCheck::SignedLatest => {
             db::clear_compliant(&pool, chat_id.0, user_id).await?;
         }
-        Ok(false) => {
+        ComplianceCheck::NotSignedLatest => {
             db::mark_non_compliant(&pool, chat_id.0, user_id).await?;
             let version = api
                 .latest_version(chat_id.0)
@@ -64,7 +71,9 @@ pub async fn handle_member_joined(
                 .parse_mode(ParseMode::Html)
                 .await;
         }
-        Err(e) => warn!(?e, "status check failed for new member"),
+        ComplianceCheck::Unknown => {
+            // Fail-closed: do not invent unsigned / start grace.
+        }
     }
     Ok(())
 }
@@ -79,15 +88,13 @@ pub async fn handle_group_message(
     if !config.is_allowed_chat(chat_id) {
         return Ok(());
     }
-    if api
-        .is_signed_latest(chat_id, user_id)
-        .await
-        .unwrap_or(false)
-    {
-        db::clear_compliant(pool, chat_id, user_id).await?;
-    } else {
-        db::mark_non_compliant(pool, chat_id, user_id).await?;
-    }
+    let check = classify_status(
+        api.is_signed_latest(chat_id, user_id).await,
+        chat_id,
+        user_id,
+        "handle_group_message",
+    );
+    apply_compliance(pool, chat_id, user_id, check.action()).await?;
     Ok(())
 }
 
@@ -153,15 +160,13 @@ pub async fn announce_terms_update(
 
     let members = db::members_for_chat(pool, chat_id).await?;
     for user_id in members {
-        if api
-            .is_signed_latest(chat_id, user_id)
-            .await
-            .unwrap_or(false)
-        {
-            db::clear_compliant(pool, chat_id, user_id).await?;
-        } else {
-            db::mark_non_compliant(pool, chat_id, user_id).await?;
-        }
+        let check = classify_status(
+            api.is_signed_latest(chat_id, user_id).await,
+            chat_id,
+            user_id,
+            "announce_terms_update",
+        );
+        apply_compliance(pool, chat_id, user_id, check.action()).await?;
     }
 
     Ok(())
@@ -181,14 +186,26 @@ pub async fn run_kicks(
 
         for allowed in &config.allowed_chats {
             let chat_id = allowed.chat_id;
-            if api
-                .is_signed_latest(chat_id, user_id)
-                .await
-                .unwrap_or(false)
-            {
-                db::clear_compliant(pool, chat_id, user_id).await?;
-                continue;
+            let check = classify_status(
+                api.is_signed_latest(chat_id, user_id).await,
+                chat_id,
+                user_id,
+                "run_kicks",
+            );
+
+            match check {
+                ComplianceCheck::SignedLatest => {
+                    db::clear_compliant(pool, chat_id, user_id).await?;
+                    continue;
+                }
+                ComplianceCheck::Unknown => {
+                    // Fail-closed: never ban when status is unknown.
+                    continue;
+                }
+                ComplianceCheck::NotSignedLatest => {}
             }
+
+            debug_assert!(check.may_kick());
 
             let chat = ChatId(chat_id);
             let member = match bot.get_chat_member(chat, tg_user).await {
@@ -225,6 +242,20 @@ pub async fn run_kicks(
     }
 
     Ok(())
+}
+
+/// Apply mark/clear/hold without escalating on Unknown.
+async fn apply_compliance(
+    pool: &sqlx::PgPool,
+    chat_id: i64,
+    user_id: i64,
+    action: ComplianceAction,
+) -> anyhow::Result<()> {
+    match action {
+        ComplianceAction::ClearCompliant => db::clear_compliant(pool, chat_id, user_id).await,
+        ComplianceAction::MarkNonCompliant => db::mark_non_compliant(pool, chat_id, user_id).await,
+        ComplianceAction::Hold => Ok(()),
+    }
 }
 
 /// Returns true if the user is still an active member (not left/banned).
