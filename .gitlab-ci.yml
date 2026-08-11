@@ -61,6 +61,13 @@ test:rust:
   script:
     - cargo test
 
+# Bot unit tests (fail-closed compliance, config parsing). No Postgres required.
+test:rust-bot:
+  extends: .rust-bot
+  stage: test
+  script:
+    - cargo test
+
 test:clickwrap:
   stage: test
   image: node:22-bookworm

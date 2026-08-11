@@ -64,4 +64,4 @@ Cross-links: GitLab issues **[#3](https://gitlab.com/plasticdigits/cl8y-ecosyste
 
 ## Out of scope here
 
-Telegram/Solana/Terra crypto fixes, bot kick semantics, property auto-upsert allowlisting, SSRF hardening of the terms fetch client (see other issues / gap P0–P1 items).
+Telegram/Solana/Terra crypto fixes, bot kick semantics (see [`skills/bot-enforcement/SKILL.md`](../bot-enforcement/SKILL.md) / GitLab #5), property auto-upsert allowlisting, SSRF hardening of the terms fetch client (see other issues / gap P0–P1 items).
