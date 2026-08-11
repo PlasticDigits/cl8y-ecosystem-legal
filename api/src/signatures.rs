@@ -142,6 +142,7 @@ pub async fn submit_wallet(
     let expected = build_wallet_message(
         &terms.version_label,
         terms.effective_date,
+        &terms.content_sha256,
         &property.identifier,
         &network_upper,
         &account_id,
@@ -201,6 +202,7 @@ pub async fn submit_telegram(
     let expected = build_telegram_acceptance_message(
         &terms.version_label,
         terms.effective_date,
+        &terms.content_sha256,
         &property.identifier,
         &account_id,
         client_timestamp,

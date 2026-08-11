@@ -237,6 +237,7 @@ async fn telegram(
     let message = build_telegram_acceptance_message(
         &terms.version_label,
         terms.effective_date,
+        &terms.content_sha256,
         &prop.identifier,
         &account_id,
         client_timestamp,

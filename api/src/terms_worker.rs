@@ -6,6 +6,7 @@ pub fn spawn_terms_sync_worker(state: AppState) {
     let pool = state.pool.clone();
     let url = state.config.terms_gitlab_raw_url.clone();
     let hours = state.config.terms_sync_interval_hours;
+    let force_downgrade = state.config.force_terms_downgrade;
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(hours * 3600));
@@ -15,7 +16,7 @@ pub fn spawn_terms_sync_worker(state: AppState) {
 
         loop {
             interval.tick().await;
-            match sync_terms_from_url(&pool, &url).await {
+            match sync_terms_from_url(&pool, &url, force_downgrade).await {
                 Ok(outcome) => {
                     tracing::info!(
                         version = %outcome.version_label(),
