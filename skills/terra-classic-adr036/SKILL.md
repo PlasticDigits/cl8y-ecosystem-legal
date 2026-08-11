@@ -27,6 +27,7 @@ Cross-links:
 - Gap note: [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) (Terra portal finding resolved; mock e2e present)
 - Integrator overview: [`README.md`](../../README.md#terra-classic-keplr)
 - CI workflow: [`.gitlab-ci.yml`](../../.gitlab-ci.yml) (MR pipelines must run `test:rust` + `test:e2e`)
+- Tests map (EVM/Terra/portal layers): [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md)
 
 ## Invariants (do not break)
 

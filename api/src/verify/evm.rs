@@ -65,17 +65,37 @@ mod tests {
         format!("0x{}", hex::encode(&digest[12..]))
     }
 
-    #[test]
-    fn roundtrip_evm_sign_verify() {
-        let key = SigningKey::from_slice(&[0x11u8; 32]).unwrap();
-        let address = address_from_key(&key);
-        let msg = "CL8Y test";
+    fn sign_hex(key: &SigningKey, msg: &str) -> String {
         let hash = eip191_hash(msg);
         let (sig, recid) = key.sign_prehash_recoverable(&hash).unwrap();
         let mut bytes = [0u8; 65];
         bytes[..64].copy_from_slice(&sig.to_bytes());
         bytes[64] = recid.to_byte() + 27;
-        let sig_hex = format!("0x{}", hex::encode(bytes));
-        verify_evm(&address, msg, &sig_hex).unwrap();
+        format!("0x{}", hex::encode(bytes))
+    }
+
+    #[test]
+    fn roundtrip_evm_sign_verify() {
+        let key = SigningKey::from_slice(&[0x11u8; 32]).unwrap();
+        let address = address_from_key(&key);
+        let msg = "CL8Y test";
+        verify_evm(&address, msg, &sign_hex(&key, msg)).unwrap();
+    }
+
+    #[test]
+    fn rejects_signature_for_different_message() {
+        let key = SigningKey::from_slice(&[0x11u8; 32]).unwrap();
+        let address = address_from_key(&key);
+        let sig = sign_hex(&key, "message A");
+        assert!(verify_evm(&address, "message B", &sig).is_err());
+    }
+
+    #[test]
+    fn rejects_signature_for_different_account() {
+        let key = SigningKey::from_slice(&[0x11u8; 32]).unwrap();
+        let other = SigningKey::from_slice(&[0x12u8; 32]).unwrap();
+        let msg = "CL8Y test";
+        let sig = sign_hex(&key, msg);
+        assert!(verify_evm(&address_from_key(&other), msg, &sig).is_err());
     }
 }
