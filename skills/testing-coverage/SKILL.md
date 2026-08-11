@@ -108,7 +108,7 @@ E2E uses **Chromium only**, `workers: 5`, mock `window.ethereum` / `window.keplr
 4. **Playwright `workers: 5`** — keep `web/playwright.config.ts` at 5 unless CI flake data justifies change.
 5. **Chromium only in CI** — `.gitlab-ci.yml` `test:e2e` installs Chromium; do not add browsers without issue.
 6. **Mock wallets in e2e** — `installEvmWallet` / `installKeplrWallet`; no mandatory real-extension job.
-7. **Consent before sign** — e2e full-sign specs use `acceptViaConsent` (checkbox + Connect & sign); aligns with `portal-sign-disclosure`.
+7. **Consent before sign** — e2e full-sign specs use `acceptViaConsent` (scroll terms to bottom + checkbox + Connect & sign); aligns with `portal-sign-disclosure`.
 8. **Redirect hardening** — evil `redirect_uri` must not navigate; success UI still shown. Portal + SDK share allowlist semantics.
 9. **XFF untrusted in e2e** — `TRUSTED_PROXY_CIDRS: ""` in Playwright API env; spoofed XFF must not split rate buckets (unit-tested).
 10. **Canonical message golden** — Rust + SDK message tests stay aligned when changing `buildWalletMessage` (must include `Content-SHA256`; see GitLab #6 / `security-ops`).

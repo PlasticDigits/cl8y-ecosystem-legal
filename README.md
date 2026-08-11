@@ -198,7 +198,7 @@ EVM and Terra Classic sign pages share [`web/src/signShell.ts`](web/src/signShel
 
 1. On load, fetch latest terms metadata + full content for the `property`.
 2. Show version label, effective date, and scrollable terms body (text nodes only — no `innerHTML`).
-3. **Consent gate:** Connect & sign stays disabled until terms load successfully **and** the user checks *I have read and agree to the Terms & Conditions* (checkbox only; not scroll-to-bottom).
+3. **Consent gate:** The agree checkbox stays disabled until the user scrolls the terms body to the bottom (or content fits without scrolling). Connect & sign stays disabled until terms load successfully **and** the user checks *I have read and agree to the Terms & Conditions*.
 4. After wallet connect, if the account already has `signed_latest`, show success without forcing a re-sign.
 
 Solana and Telegram sign pages are unchanged for now (see GitLab issue #2). Agent/integrator notes: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md). Related gap analysis: [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md).

@@ -1,5 +1,18 @@
 import { expect, type Page } from "@playwright/test";
 
+/** Scroll the terms body to the bottom so the consent checkbox can unlock. */
+export async function scrollTermsToBottom(page: Page) {
+  const body = page.locator(".terms-body");
+  await expect(body).toBeVisible();
+  await body.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+    el.dispatchEvent(new Event("scroll"));
+  });
+  await expect(page.getByLabel(/I have read and agree to the Terms & Conditions/i)).toBeEnabled({
+    timeout: 10_000,
+  });
+}
+
 /** Wait for terms disclosure and enable Connect & sign via consent checkbox. */
 export async function consentAndEnableSign(page: Page) {
   await expect(page.locator(".terms-body")).toContainText(/CL8Y ECOSYSTEM TERMS AND CONDITIONS/i, {
@@ -7,6 +20,7 @@ export async function consentAndEnableSign(page: Page) {
   });
   const signBtn = page.getByRole("button", { name: /Connect & sign/i });
   await expect(signBtn).toBeDisabled();
+  await scrollTermsToBottom(page);
   await page.getByLabel(/I have read and agree to the Terms & Conditions/i).check();
   await expect(signBtn).toBeEnabled();
   return signBtn;

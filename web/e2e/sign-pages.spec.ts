@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { scrollTermsToBottom } from "./helpers/sign-flow";
 
 async function expectTermsDisclosure(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Terms & Conditions" })).toBeVisible();
@@ -10,8 +11,12 @@ async function expectTermsDisclosure(page: import("@playwright/test").Page) {
   expect(text.length).toBeGreaterThan(100);
 
   const btn = page.getByRole("button", { name: /Connect & sign/i });
+  const consent = page.getByLabel(/I have read and agree to the Terms & Conditions/i);
   await expect(btn).toBeDisabled();
-  await page.getByLabel(/I have read and agree to the Terms & Conditions/i).check();
+  await expect(consent).toBeDisabled();
+  await expect(page.getByText(/Scroll to the bottom of the terms/i)).toBeVisible();
+  await scrollTermsToBottom(page);
+  await consent.check();
   await expect(btn).toBeEnabled();
 }
 

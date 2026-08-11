@@ -17,7 +17,7 @@ Guidance for third-party / agent players changing CL8Y Legal signing UX.
 1. **Notice before wallet:** Full latest terms text is visible before Connect & sign runs any wallet API.
 2. **Version + effective date** are shown near the terms body (from `GET /api/v1/terms/latest`).
 3. **Safe render:** Terms body uses text nodes only (`el` / `textContent`). Never `innerHTML` for API content or `property` query values.
-4. **Consent gate:** CTA disabled until terms load **and** the user checks “I have read and agree…”. Document any gate change in the MR.
+4. **Consent gate:** Agree checkbox stays disabled until the user scrolls the terms body to the bottom (or content fits without scrolling). CTA disabled until terms load **and** the user checks “I have read and agree…”. Document any gate change in the MR.
 5. **Fetch once:** Metadata + content fetched once per page load (`getTermsLatest` + `getTermsContent` in parallel). No refetch storms on checkbox toggle.
 6. **Canonical message lockstep:** Do not alter `buildWalletMessage` / signed message text without API + SDK golden-test coordination. Messages must include `Content-SHA256` from `terms.content_sha256` (GitLab [#6](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/6), [`security-ops`](../security-ops/SKILL.md)).
 7. **Errors visible:** Terms fetch failure shows a clear alert; CTA must not silently enable.

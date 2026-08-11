@@ -94,9 +94,24 @@ pre.message {
   cursor: pointer;
 }
 
+.consent-label:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
 .consent-label input {
   margin-top: 0.25rem;
   flex-shrink: 0;
+}
+
+.consent-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+}
+
+.consent-hint:empty,
+.consent-hint[hidden] {
+  display: none;
 }
 
 .links a {
