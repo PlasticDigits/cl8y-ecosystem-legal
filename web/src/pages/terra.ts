@@ -1,4 +1,10 @@
 import { getStatus, submitWallet } from "../api";
+import {
+  hasInjectedKeplr,
+  MISSING_KEPLR_STATUS,
+  terraIdleStatus,
+} from "../keplrMobile";
+import { createKeplrMobileFallback } from "../keplrMobileUi";
 import { buildWalletMessage } from "../message";
 import { getAppName, getRedirectUri, requireProperty } from "../query";
 import { renderSignShell } from "../signShell";
@@ -21,33 +27,6 @@ function canonicalizeTerraAddress(address: string): string {
   return lower;
 }
 
-interface KeplrKey {
-  bech32Address: string;
-}
-
-interface KeplrArbitrarySignature {
-  signature: string;
-  pub_key: { type: string; value: string };
-}
-
-declare global {
-  interface Window {
-    keplr?: {
-      enable: (chainId: string) => Promise<void>;
-      getKey: (chainId: string) => Promise<KeplrKey>;
-      /**
-       * ADR-036 `signArbitrary` — not OfflineSigner.signArbitrary(address, data).
-       * @see https://docs.keplr.app/api/guide/sign-arbitrary
-       */
-      signArbitrary: (
-        chainId: string,
-        signerAddress: string,
-        data: string | Uint8Array,
-      ) => Promise<KeplrArbitrarySignature>;
-    };
-  }
-}
-
 export async function renderTerra(root: HTMLElement) {
   const property = requireProperty();
   if (!property) {
@@ -57,14 +36,22 @@ export async function renderTerra(root: HTMLElement) {
 
   const appName = getAppName();
   const redirectUri = getRedirectUri();
+  const fallback = createKeplrMobileFallback();
+  const injected = hasInjectedKeplr();
+  fallback.sync(injected);
 
   await renderSignShell(root, {
     title: "Sign with Terra Classic wallet",
     property,
     appName,
-    idleStatus: "Connect Keplr for Terra Classic.",
+    idleStatus: terraIdleStatus(injected),
+    extraControls: fallback.root,
     onSign: async ({ terms, setStatus }) => {
-      if (!window.keplr) throw new Error("Keplr extension not found");
+      if (!hasInjectedKeplr() || !window.keplr) {
+        fallback.focusCta();
+        setStatus(MISSING_KEPLR_STATUS, "error");
+        return;
+      }
       await window.keplr.enable(TERRA_CHAIN_ID);
       const key = await window.keplr.getKey(TERRA_CHAIN_ID);
       const accountId = canonicalizeTerraAddress(key.bech32Address);

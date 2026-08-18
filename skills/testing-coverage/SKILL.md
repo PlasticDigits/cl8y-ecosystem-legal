@@ -47,7 +47,7 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 |-------|-------|
 | API unit | `api/src/verify/{evm,terra}.rs`, `api/src/auth.rs`, `api/src/rate_limit.rs`, `api/src/message.rs`, `api/src/account.rs`, `api/src/config.rs` |
 | API integration | `api/tests/integration_test.rs` |
-| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts` |
+| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts`, `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts` |
 | SDK unit | `packages/cl8y-clickwrap/src/redirect.test.ts`, `packages/cl8y-clickwrap/src/message.test.ts`, `packages/cl8y-clickwrap/src/client.test.ts` |
 | E2E | `web/e2e/{home,sign-pages,evm-sign,terra-sign,redirect}.spec.ts`, `web/e2e/helpers/{evm-wallet,keplr-wallet,sign-flow}.ts` |
 | E2E (leave as-is) | `web/e2e/telegram-config.spec.ts` |
@@ -66,7 +66,8 @@ Proves **pure logic** in isolation — no Postgres, no browser, no live GitLab f
 | XFF / rate limit | Peer IP default; rightmost XFF when trusted; spoof ignored without trust; `/update_terms` 1 req/s | `api/src/rate_limit.rs` |
 | Token boot | `ADMIN_TOKEN` fail-fast unless `ALLOW_INSECURE_DEFAULTS` | `api/src/config.rs` |
 | Message / account | Canonical message build, timestamp skew rules, Terra bech32 normalize | `api/src/message.rs`, `api/src/account.rs` |
-| Sign shell | Terms text-only render, consent gate, load error | `web/src/signShell.test.ts` |
+| Sign shell | Terms text-only render, consent gate, load error, extraControls | `web/src/signShell.test.ts` |
+| Keplr mobile fallback | Universal `web-browser` deep link encoding, origin bind, copy-link, idle copy | `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts` |
 | Redirect allowlist | Env wiring, evil scheme/origin block | `web/src/redirect.test.ts`, `web/src/ui.test.ts`, `packages/cl8y-clickwrap/src/redirect.test.ts` |
 
 ### Integration (API + Postgres)
@@ -94,7 +95,7 @@ Proves **full stack** — portal UI, mock wallets, authenticated terms publish, 
 | `home.spec.ts` | Home loads; links to sign routes |
 | `sign-pages.spec.ts` | Missing `property` guard; EVM + Terra terms disclosure + consent gate |
 | `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest` |
-| `terra-sign.spec.ts` | Mock Keplr `signArbitrary` ADR-036 → accept → `signed_latest` |
+| `terra-sign.spec.ts` | Mock Keplr `signArbitrary` ADR-036 → accept → `signed_latest`; missing `window.keplr` → Open in Keplr CTA (GitLab #9) |
 | `redirect.spec.ts` | Allowlisted `redirect_uri` navigates; evil URI shows success without navigation |
 | `telegram-config.spec.ts` | “Not configured” smoke only — **do not expand** for #4 |
 
@@ -120,7 +121,7 @@ E2E uses **Chromium only**, `workers: 5`, mock `window.ethereum` / `window.keplr
 When adding or changing tests for this issue:
 
 - [ ] In-scope path has coverage at the right layer (unit vs integration vs e2e) — see table above
-- [ ] Terra: CosmJS vector + integration submit + mock Keplr e2e still green
+- [ ] Terra: CosmJS vector + integration submit + mock Keplr e2e still green (including missing-Keplr Open in Keplr CTA)
 - [ ] EVM: integration + `evm-sign.spec.ts` still green
 - [ ] Terms disclosure: `signShell.test.ts` + `sign-pages.spec.ts` (EVM + Terra) still green
 - [ ] Security: `integration_update_terms_requires_admin_bearer` + `rate_limit.rs` XFF tests still green
@@ -162,7 +163,7 @@ Maps GitLab #4 acceptance criteria to concrete tests (close #4 when all rows are
 | `/update_terms` auth + XFF/trust once #3 lands | `integration_update_terms_requires_admin_bearer`; `api/src/rate_limit.rs` `xff_*` / `spoofed_xff_*` tests |
 | Portal terms disclosure EVM + Terra (#2) | `web/src/signShell.test.ts`; `web/e2e/sign-pages.spec.ts` |
 | EVM Playwright full sign green | `web/e2e/evm-sign.spec.ts` |
-| Terra Classic Playwright path (prefer full e2e) | `web/e2e/terra-sign.spec.ts` + `web/e2e/helpers/keplr-wallet.ts` |
+| Terra Classic Playwright path (prefer full e2e) | `web/e2e/terra-sign.spec.ts` + `web/e2e/helpers/keplr-wallet.ts` (happy + missing Keplr) |
 | Redirect allowlist automated | `web/src/redirect.test.ts`, `web/src/ui.test.ts`, `packages/cl8y-clickwrap/src/redirect.test.ts`, `web/e2e/redirect.spec.ts` |
 | CI updated; no unauth `/update_terms` | `.gitlab-ci.yml` `ADMIN_TOKEN`; `web/e2e/global-setup.ts` Bearer; `web/playwright.config.ts` |
 | No new Telegram/Solana test debt | Explicit non-goals; `telegram-config.spec.ts` unchanged scope |
