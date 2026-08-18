@@ -117,3 +117,32 @@ pre.message {
 .links a {
   color: #8eb4ff;
 }
+
+.button-secondary {
+  display: inline-block;
+  background: transparent;
+  color: #8eb4ff;
+  border: 1px solid #3d6ef5;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  margin: 0.25rem 0.25rem 0.25rem 0;
+}
+
+.keplr-mobile-fallback[hidden] {
+  display: none;
+}
+
+.keplr-mobile-fallback--attention {
+  outline: 2px solid #3d6ef5;
+  outline-offset: 4px;
+  border-radius: 8px;
+  padding: 0.5rem 0;
+}
+
+.keplr-mobile-help,
+.keplr-store-links {
+  margin: 0.5rem 0 0;
+}

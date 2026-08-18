@@ -111,7 +111,7 @@ await client.submitTelegram({ /* … */ });
 | `TerraClassic`  | `TERRA_CLASSIC`  | `terra_classic`  |
 | `Telegram`      | `TELEGRAM`       | `telegram`       |
 
-Terra Classic signing on the hosted portal uses Keplr ADR-036 (`columbus-5`). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify. Crypto invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
+Terra Classic signing on the hosted portal uses Keplr ADR-036 (`columbus-5`). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify. Mobile Chrome users complete the same portal page inside the **Keplr in-app browser** (Open in Keplr CTA — GitLab #9); do not reimplement WalletConnect on the integrator site for T&C. Crypto + mobile-fallback invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
 
 ## Redirect URI safety
 

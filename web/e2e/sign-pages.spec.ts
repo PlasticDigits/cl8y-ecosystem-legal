@@ -32,6 +32,7 @@ test.describe("sign pages require property", () => {
     await page.goto("/sign/evm?property=cl8y.com");
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
     await expectTermsDisclosure(page);
+    await expect(page.getByRole("link", { name: /Open in Keplr/i })).toHaveCount(0);
   });
 
   test("/sign/terra-classic shows property, terms, and consent gate when set", async ({ page }) => {

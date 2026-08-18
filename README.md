@@ -186,9 +186,14 @@ Network id: `TERRA_CLASSIC`. Portal chain: Terra Classic **`columbus-5`** (not T
 
 The portal calls Keplr `signArbitrary(columbus-5, signer, data)`. The API verifies CosmJS-compatible ADR-036 amino `sign/MsgSignData` digests and binds the compressed secp256k1 pubkey to the claimed `terra1…` bech32 address (checksummed; not prefix-only).
 
-- Crypto invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
-- Playwright: mocked Keplr in `web/e2e/terra-sign.spec.ts` (see `web/e2e/helpers/keplr-wallet.ts`)
-- Verify locally: `cd api && cargo test --lib terra && cargo test --test integration_test terra` and `cd web && npm run test:e2e -- terra-sign` (Playwright workers=5 via `playwright.config.ts`).
+**How users sign** (GitLab [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9)):
+
+1. **Desktop Keplr extension** or **Keplr in-app browser** — `window.keplr` is injected; Connect & sign runs ADR-036 as in issue #1.
+2. **Phone Chrome / Firefox / Safari** — there is no desktop extension. The portal shows **Open in Keplr** (documented [universal web-browser deeplink](https://docs.keplr.app/api/mobile/deeplink) with the current `/sign/terra-classic?…` URL) and **Copy link**. Signing then happens on path 1 inside the app. The page never dead-ends on `Keplr extension not found`. WalletConnect / stay-in-Chrome `signArbitrary` is not implemented yet.
+
+- Crypto + mobile-fallback invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
+- Playwright: mocked Keplr happy path **and** missing-`window.keplr` CTA in `web/e2e/terra-sign.spec.ts` (see `web/e2e/helpers/keplr-wallet.ts`, `web/src/keplrMobile.ts`)
+- Verify locally: `cd api && cargo test --lib terra && cargo test --test integration_test terra` and `cd web && npm test -- keplrMobile && npm run test:e2e -- terra-sign` (Playwright workers=5 via `playwright.config.ts`).
 
 **Migration note:** There is no dual-verify for the previous incorrect raw-ECDSA server path — that path never matched production Keplr, so stored Terra proofs (if any) from the broken verifier are not accepted.
 

@@ -13,6 +13,8 @@ import { el } from "./ui";
  *    terms load successfully AND the user checks "I have read and agree to the Terms & Conditions".
  * 5. Terms metadata + content are fetched once per page load (no refetch on consent toggle).
  * 6. Status updates use a polite live region; load failures use `role="alert"`.
+ * 7. Optional `extraControls` is for network-specific CTAs (Terra Open in Keplr).
+ *    EVM omits it. Do not put wallet secrets in extra markup.
  *
  * Solana / Telegram sign pages are out of scope for this shell (see GitLab #2).
  * Cross-links: skills/portal-sign-disclosure/SKILL.md, README "Portal sign UX".
@@ -31,6 +33,8 @@ export interface SignShellOptions {
   appName: string | null;
   idleStatus: string;
   onSign: (ctx: SignShellContext) => Promise<void>;
+  /** Optional network-specific controls (Terra Open in Keplr). EVM omits this. */
+  extraControls?: HTMLElement;
 }
 
 /** Pixels of leeway so rubber-banding / subpixel layout still counts as "at bottom". */
@@ -48,7 +52,7 @@ export function hasScrolledTermsToBottom(termsBody: HTMLElement): boolean {
 }
 
 export async function renderSignShell(root: HTMLElement, options: SignShellOptions): Promise<void> {
-  const { title, property, appName, idleStatus, onSign } = options;
+  const { title, property, appName, idleStatus, onSign, extraControls } = options;
 
   const statusEl = el("p", { className: "muted", role: "status", "aria-live": "polite" }, [
     "Loading terms…",
@@ -94,7 +98,11 @@ export async function renderSignShell(root: HTMLElement, options: SignShellOptio
       consentLabel,
       consentHint,
     ]),
-    el("div", { className: "card" }, [statusEl, btn]),
+    el("div", { className: "card" }, [
+      statusEl,
+      btn,
+      extraControls ?? document.createComment(""),
+    ]),
   );
 
   let terms: TermsLatest | null = null;

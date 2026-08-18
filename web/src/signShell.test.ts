@@ -174,4 +174,27 @@ describe("renderSignShell", () => {
     expect(btn.disabled).toBe(true);
     expect(checkbox.disabled).toBe(true);
   });
+
+  it("renders optional extraControls after Connect & sign", async () => {
+    vi.mocked(getTermsLatest).mockResolvedValue(termsFixture);
+    vi.mocked(getTermsContent).mockResolvedValue("Short terms");
+
+    const extra = document.createElement("div");
+    extra.textContent = "Open in Keplr";
+
+    const root = document.createElement("div");
+    await renderSignShell(root, {
+      title: "Sign with Terra Classic wallet",
+      property: "cl8y.com",
+      appName: null,
+      idleStatus: "Connect Keplr for Terra Classic.",
+      extraControls: extra,
+      onSign: vi.fn(),
+    });
+
+    expect(root.textContent).toContain("Open in Keplr");
+    const connect = root.querySelector("button") as HTMLButtonElement;
+    expect(connect.textContent).toMatch(/Connect & sign/i);
+    expect(connect.nextElementSibling).toBe(extra);
+  });
 });
