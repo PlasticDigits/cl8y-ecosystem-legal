@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getAppName, getQueryParams, getRedirectUri, requireProperty } from "./query";
+import { getAppName, getClaimedAccount, getQueryParams, getRedirectUri, requireProperty } from "./query";
 
 function setSearch(search: string) {
   const path = search ? `?${search}` : "";
@@ -31,5 +31,12 @@ describe("query params", () => {
     expect(getRedirectUri()).toBe("https://example.com");
     setSearch("");
     expect(getRedirectUri()).toBeNull();
+  });
+
+  it("getClaimedAccount trims and rejects empty", () => {
+    setSearch("account=%20terra1abc%20");
+    expect(getClaimedAccount()).toBe("terra1abc");
+    setSearch("account=");
+    expect(getClaimedAccount()).toBeNull();
   });
 });

@@ -8,6 +8,11 @@ export interface SignUrlOptions {
    */
   redirectUri?: string;
   appName?: string;
+  /**
+   * Connected account for portal continuity (Terra Classic `terra1…`).
+   * The portal rejects a signature for a different address (GitLab #11).
+   */
+  account?: string;
 }
 
 export function buildSignUrl(baseUrl: string, opts: SignUrlOptions = {}): string {
@@ -17,6 +22,9 @@ export function buildSignUrl(baseUrl: string, opts: SignUrlOptions = {}): string
   }
   if (opts.appName) {
     url.searchParams.set("app_name", opts.appName);
+  }
+  if (opts.account?.trim()) {
+    url.searchParams.set("account", opts.account.trim());
   }
   return url.toString();
 }

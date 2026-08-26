@@ -2,9 +2,11 @@
 //!
 //! # Invariants
 //!
-//! - Portal Keplr calls `window.keplr.signArbitrary(chainId, signer, data)` on
-//!   Terra Classic chain id `columbus-5`. Keplr wraps `data` as ADR-036
-//!   `sign/MsgSignData` (amino JSON), **not** raw UTF-8 bytes.
+//! - Portal wallets call Keplr-compatible `signArbitrary(chainId, signer, data)`
+//!   on Terra Classic chain id `columbus-5` (Station / Keplr / Leap /
+//!   Cosmostation / Galaxy WC). LUNC Dash `signBytes` must be the pre-serialized
+//!   ADR-036 amino JSON, **not** raw UTF-8 legal-message bytes. See GitLab #11
+//!   and `skills/terra-classic-adr036/SKILL.md`.
 //! - The signed amino document always uses empty `chain_id` / `memo`,
 //!   `account_number`/`sequence` `"0"`, and zero fee — matching CosmJS
 //!   `makeADR36AminoSignDoc` / Keplr ADR-036 (independent of `columbus-5`).

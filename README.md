@@ -180,20 +180,34 @@ Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`,
 
 Rate limits: per-IP (see `.env.example`).
 
-### Terra Classic (Keplr)
+### Terra Classic (ustr-cmm wallet set)
 
 Network id: `TERRA_CLASSIC`. Portal chain: Terra Classic **`columbus-5`** (not Terra 2.0).
 
-The portal calls Keplr `signArbitrary(columbus-5, signer, data)`. The API verifies CosmJS-compatible ADR-036 amino `sign/MsgSignData` digests and binds the compressed secp256k1 pubkey to the claimed `terra1…` bech32 address (checksummed; not prefix-only).
+The portal signs ADR-036 `sign/MsgSignData` and the API verifies CosmJS-compatible digests, binding the compressed secp256k1 pubkey to the claimed `terra1…` bech32 address (checksummed; not prefix-only). **Keplr is not required** when another wallet from the ustr-cmm set is available (GitLab [#11](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/11)).
 
-**How users sign** (GitLab [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9)):
+**Wallet matrix** (lockstep with ustr-cmm `frontend/src/services/wallet.ts` + `WalletButton.tsx`):
 
-1. **Desktop Keplr extension** or **Keplr in-app browser** — `window.keplr` is injected; Connect & sign runs ADR-036 as in issue #1.
-2. **Phone Chrome / Firefox / Safari** — there is no desktop extension. The portal shows **Open in Keplr** (documented [universal web-browser deeplink](https://docs.keplr.app/api/mobile/deeplink) with the current `/sign/terra-classic?…` URL) and **Copy link**. Signing then happens on path 1 inside the app. The page never dead-ends on `Keplr extension not found`. WalletConnect / stay-in-Chrome `signArbitrary` is not implemented yet.
+| Wallet | Portal path |
+|--------|-------------|
+| Terra Station | Injected `window.station.keplr.signArbitrary` |
+| Keplr (Trust if Keplr-compat) | Injected `window.keplr.signArbitrary` |
+| Leap | Injected `window.leap.signArbitrary` |
+| Cosmostation | Injected `window.cosmostation.providers.keplr.signArbitrary` |
+| LUNC Dash | In-page WalletConnect v1 + `signBytes` of the pre-serialized ADR-036 amino doc |
+| Galaxy Station | In-page WalletConnect v2 `keplr_signArbitrary` (needs Legal-owned `VITE_WC_PROJECT_ID`) |
 
-- Crypto + mobile-fallback invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
-- Playwright: mocked Keplr happy path **and** missing-`window.keplr` CTA in `web/e2e/terra-sign.spec.ts` (see `web/e2e/helpers/keplr-wallet.ts`, `web/src/keplrMobile.ts`)
-- Verify locally: `cd api && cargo test --lib terra && cargo test --test integration_test terra` and `cd web && npm test -- keplrMobile && npm run test:e2e -- terra-sign` (Playwright workers=5 via `playwright.config.ts`).
+**How users sign:**
+
+1. **Injected extension / in-app browser** — pick the wallet already in the page; Connect & sign runs that provider’s ADR-036 `signArbitrary` (`columbus-5`).
+2. **Phone Chrome (LUNC Dash / Galaxy Station)** — pick that wallet; approve the in-page pairing sheet (**Open {wallet}** + **Copy pairing link**). Do not switch to Keplr.
+3. **Open in Keplr fallback** (GitLab [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9)) — documented [universal web-browser deeplink](https://docs.keplr.app/api/mobile/deeplink) + **Copy link**. Still works when no other wallet is chosen.
+
+If the integrator passes `account=terra1…` (SDK `buildSignUrl({ account })`), the portal rejects a signature for a different address.
+
+- Crypto + wallet-matrix invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
+- Playwright: mock Keplr, mock Leap (no `window.keplr`), mock LUNC Dash WC, missing-Keplr CTA in `web/e2e/terra-sign.spec.ts`
+- Verify locally: `cd api && cargo test --lib terra && cargo test --test integration_test terra` and `cd web && npm test && npm run test:e2e -- terra-sign` (Playwright workers=5 via `playwright.config.ts`).
 
 **Migration note:** There is no dual-verify for the previous incorrect raw-ECDSA server path — that path never matched production Keplr, so stored Terra proofs (if any) from the broken verifier are not accepted.
 

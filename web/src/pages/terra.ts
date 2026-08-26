@@ -6,26 +6,14 @@ import {
 } from "../keplrMobile";
 import { createKeplrMobileFallback } from "../keplrMobileUi";
 import { buildWalletMessage } from "../message";
-import { getAppName, getRedirectUri, requireProperty } from "../query";
+import { getAppName, getClaimedAccount, getRedirectUri, requireProperty } from "../query";
 import { renderSignShell } from "../signShell";
-import { renderMissingProperty, renderSuccess } from "../ui";
-
-/** Terra Classic mainnet — do not retarget to Terra 2.0 without an explicit product change. */
-const TERRA_CHAIN_ID = "columbus-5";
-
-/**
- * Canonicalize Keplr bech32 to lowercase before building/signing the legal message.
- * API `normalize_account` also re-encodes lowercase; mixed case is invalid per BIP-173.
- */
-function canonicalizeTerraAddress(address: string): string {
-  const trimmed = address.trim();
-  const lower = trimmed.toLowerCase();
-  const upper = trimmed.toUpperCase();
-  if (trimmed !== lower && trimmed !== upper) {
-    throw new Error("invalid Terra Classic address (mixed case)");
-  }
-  return lower;
-}
+import { el, renderMissingProperty, renderSuccess } from "../ui";
+import { hasAnyInjectedTerraWallet } from "../terra/injected";
+import { TERRA_WALLET_MATRIX } from "../terra/matrix";
+import { createTerraWalletPicker } from "../terra/pickerUi";
+import { signTerraClassicMessage } from "../terra/sign";
+import { createWalletConnectPairingSheet } from "../terra/walletConnectUi";
 
 export async function renderTerra(root: HTMLElement) {
   const property = requireProperty();
@@ -36,55 +24,84 @@ export async function renderTerra(root: HTMLElement) {
 
   const appName = getAppName();
   const redirectUri = getRedirectUri();
+  const claimedAccount = getClaimedAccount();
   const fallback = createKeplrMobileFallback();
-  const injected = hasInjectedKeplr();
+  const picker = createTerraWalletPicker();
+  const pairing = createWalletConnectPairingSheet();
+  const injected = hasAnyInjectedTerraWallet();
   fallback.sync(injected);
+
+  const extras: HTMLElement[] = [picker.root, pairing.root, fallback.root];
+  if (claimedAccount) {
+    extras.unshift(
+      el("p", { className: "muted terra-claimed-account" }, [`Sign as ${claimedAccount}`]),
+    );
+  }
+  const extra = el("div", { className: "terra-sign-extras" }, extras);
 
   await renderSignShell(root, {
     title: "Sign with Terra Classic wallet",
     property,
     appName,
     idleStatus: terraIdleStatus(injected),
-    extraControls: fallback.root,
+    extraControls: extra,
     onSign: async ({ terms, setStatus }) => {
-      if (!hasInjectedKeplr() || !window.keplr) {
+      picker.refresh();
+      const walletId = picker.selected();
+      if (!walletId && !hasInjectedKeplr() && !hasAnyInjectedTerraWallet()) {
         fallback.focusCta();
         setStatus(MISSING_KEPLR_STATUS, "error");
         return;
       }
-      await window.keplr.enable(TERRA_CHAIN_ID);
-      const key = await window.keplr.getKey(TERRA_CHAIN_ID);
-      const accountId = canonicalizeTerraAddress(key.bech32Address);
 
-      const status = await getStatus(property, "TERRA_CLASSIC", accountId);
-      if (status.signed_latest) {
+      let clientTimestamp = new Date();
+      let signedMessage = "";
+      setStatus(confirmCopy(walletId));
+
+      const result = await signTerraClassicMessage({
+        walletId,
+        claimedAccount,
+        pairing,
+        focusKeplrFallback: () => fallback.focusCta(),
+        prepare: async (accountId) => {
+          const status = await getStatus(property, "TERRA_CLASSIC", accountId);
+          if (status.signed_latest) {
+            return { alreadySigned: true };
+          }
+          clientTimestamp = new Date();
+          signedMessage = buildWalletMessage({
+            versionLabel: terms.version_label,
+            effectiveDate: terms.effective_date,
+            contentSha256: terms.content_sha256,
+            property: terms.property,
+            network: "TERRA_CLASSIC",
+            accountId,
+            clientTimestamp,
+          });
+          return { message: signedMessage };
+        },
+      });
+
+      if ("alreadySigned" in result) {
         renderSuccess(root, terms.version_label, redirectUri);
         return;
       }
 
-      const clientTimestamp = new Date();
-      const message = buildWalletMessage({
-        versionLabel: terms.version_label,
-        effectiveDate: terms.effective_date,
-        contentSha256: terms.content_sha256,
-        property: terms.property,
-        network: "TERRA_CLASSIC",
-        accountId,
-        clientTimestamp,
-      });
-      setStatus("Confirm signature in Keplr…");
-      // Keplr wraps `message` as ADR-036 MsgSignData; API verifies the same envelope.
-      const result = await window.keplr.signArbitrary(TERRA_CHAIN_ID, accountId, message);
       await submitWallet({
         property,
         network: "TERRA_CLASSIC",
-        account_id: accountId,
-        message,
+        account_id: result.accountId,
+        message: signedMessage,
         signature: result.signature,
-        pubkey: result.pub_key.value,
+        pubkey: result.pubkey,
         client_timestamp: clientTimestamp.toISOString(),
       });
       renderSuccess(root, terms.version_label, redirectUri);
     },
   });
+}
+
+function confirmCopy(walletId: string | null): string {
+  const label = TERRA_WALLET_MATRIX.find((w) => w.id === walletId)?.label ?? "wallet";
+  return `Confirm signature in ${label}…`;
 }

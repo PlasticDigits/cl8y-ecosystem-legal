@@ -13,8 +13,9 @@ import { el } from "./ui";
  *    terms load successfully AND the user checks "I have read and agree to the Terms & Conditions".
  * 5. Terms metadata + content are fetched once per page load (no refetch on consent toggle).
  * 6. Status updates use a polite live region; load failures use `role="alert"`.
- * 7. Optional `extraControls` is for network-specific CTAs (Terra Open in Keplr).
- *    EVM omits it. Do not put wallet secrets in extra markup.
+ * 7. Optional `extraControls` is for network-specific CTAs (Terra wallet picker,
+ *    WalletConnect pairing, Open in Keplr). EVM omits it. Do not put wallet
+ *    secrets or WC project secrets in extra markup.
  *
  * Solana / Telegram sign pages are out of scope for this shell (see GitLab #2).
  * Cross-links: skills/portal-sign-disclosure/SKILL.md, README "Portal sign UX".
