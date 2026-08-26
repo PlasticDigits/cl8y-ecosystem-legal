@@ -27,3 +27,13 @@ export function getRedirectUri(): string | null {
 export function getAppName(): string | null {
   return getQueryParams().get("app_name");
 }
+
+/**
+ * Integrator-connected `terra1…` (or EVM/Solana account) for continuity.
+ * Terra Classic rejects a signature for a different address (GitLab #11).
+ * Never treat this as a redirect target.
+ */
+export function getClaimedAccount(): string | null {
+  const account = getQueryParams().get("account");
+  return account?.trim() || null;
+}

@@ -14,20 +14,22 @@
  * 3. Optional `expectedOrigin` must match the target origin when provided
  *    (page callers pass `window.location.origin`).
  * 4. Copy-link copies the portal sign URL, not the Keplr deeplink host.
- * 5. WalletConnect / in-Chrome `signArbitrary` is out of scope here.
+ * 5. WalletConnect / in-Chrome `signArbitrary` lives in `web/src/terra/`
+ *    (GitLab #11). This module is the Keplr in-app-browser fallback only.
  *
  * Docs: https://docs.keplr.app/api/mobile/deeplink
  */
 
 export const KEPLR_DEEPLINK_ORIGIN = "https://deeplink.keplr.app";
 
-export const TERRA_IDLE_WITH_KEPLR = "Connect Keplr for Terra Classic.";
+export const TERRA_IDLE_WITH_KEPLR = "Connect your Terra Classic wallet.";
 
-/** Retail-short; do not mention ADR-036. */
+/** Retail-short; do not mention ADR-036. Do not tell phones to install a desktop extension. */
 export const TERRA_IDLE_WITHOUT_KEPLR =
-  "On a phone, open this page in the Keplr app. Chrome cannot use the desktop extension.";
+  "Choose a wallet, or open this page in the Keplr app. Chrome cannot use the desktop extension.";
 
-export const MISSING_KEPLR_STATUS = "Keplr is not in this browser. Use Open in Keplr below.";
+export const MISSING_KEPLR_STATUS =
+  "Keplr is not in this browser. Use Open in Keplr below, or pick another wallet.";
 
 interface KeplrKey {
   bech32Address: string;

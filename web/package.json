@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@plasticdigits/cl8y-clickwrap": "*",
+    "@walletconnect/legacy-client": "^2.0.0",
+    "@walletconnect/sign-client": "^2.8.6",
     "viem": "^2.55.11"
   },
   "devDependencies": {

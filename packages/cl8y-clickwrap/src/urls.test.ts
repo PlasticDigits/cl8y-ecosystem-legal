@@ -11,6 +11,13 @@ describe("sign url helpers", () => {
     expect(url).toContain("app_name=CL8Y");
   });
 
+  it("buildSignUrl appends claimed account for Terra continuity", () => {
+    const url = buildSignUrl("https://terms.cl8y.com/sign/terra-classic?property=ust1cmm.com", {
+      account: " terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt ",
+    });
+    expect(url).toContain("account=terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt");
+  });
+
   it("appendSignParams updates all network urls", () => {
     const signUrls = {
       evm: "https://terms.cl8y.com/sign/evm?property=cl8y.com",

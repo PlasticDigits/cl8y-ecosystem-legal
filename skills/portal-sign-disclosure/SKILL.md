@@ -25,7 +25,7 @@ Guidance for third-party / agent players changing CL8Y Legal signing UX.
 
 ## Shared entry point
 
-Prefer `renderSignShell` in `web/src/signShell.ts` over duplicating markup in network pages. Network-specific wallet code stays in `web/src/pages/evm.ts` / `terra.ts` via `onSign`. Terra Classic may pass optional `extraControls` (Open in Keplr — GitLab [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9) / [`terra-classic-adr036`](../terra-classic-adr036/SKILL.md)); EVM must omit it.
+Prefer `renderSignShell` in `web/src/signShell.ts` over duplicating markup in network pages. Network-specific wallet code stays in `web/src/pages/evm.ts` / `terra.ts` via `onSign`. Terra Classic may pass optional `extraControls` (wallet picker + WalletConnect pairing + Open in Keplr — GitLab [#11](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/11) / [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9) / [`terra-classic-adr036`](../terra-classic-adr036/SKILL.md)); EVM must omit it.
 
 ## Tests to keep green
 
@@ -34,7 +34,7 @@ Full layer map: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.m
 - Unit: `web/src/signShell.test.ts` (XSS-as-text, consent gate, load error, optional `extraControls`)
 - E2E: `web/e2e/sign-pages.spec.ts` (terms visible + gate on EVM/Terra; EVM has no Open in Keplr)
 - E2E: `web/e2e/evm-sign.spec.ts` (consent then mock-wallet accept)
-- Terra mobile CTA: `web/e2e/terra-sign.spec.ts` (missing `window.keplr`) + `web/src/keplrMobile*.test.ts`
+- Terra wallets: `web/e2e/terra-sign.spec.ts` (Keplr, Leap, LUNC Dash WC mock, missing-Keplr CTA) + `web/src/terra/*.test.ts` + `web/src/keplrMobile*.test.ts`
 
 ## Out of scope unless asked
 
