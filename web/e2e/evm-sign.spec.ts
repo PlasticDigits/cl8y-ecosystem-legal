@@ -1,12 +1,11 @@
 import { test, expect } from "@playwright/test";
 import {
   evmRequestCount,
-  injectEvmWalletNow,
   installBinanceChainWallet,
   installEip6963Wallet,
-  installEvmSignerOnly,
   installEvmWallet,
   installEvmWalletConnectMock,
+  installLateEvmWallet,
   installTwoEip6963Wallets,
   testEvmAccount,
 } from "./helpers/evm-wallet";
@@ -76,7 +75,8 @@ test.describe("EVM full-stack sign", () => {
     await expect(page.getByText(/No wallet in this browser/i)).toBeVisible();
     await expect(openMm).toBeVisible();
     await expect(page.getByRole("heading", { name: "Accepted" })).toHaveCount(0);
-    await expect(signBtn).toBeEnabled();
+    await expect(page.getByLabel(/I have read and agree to the Terms & Conditions/i)).toBeChecked();
+    await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeEnabled();
   });
 
   test("EIP-6963 mock signs without window.ethereum", async ({ page }) => {
@@ -99,11 +99,8 @@ test.describe("EVM full-stack sign", () => {
   });
 
   test("late ethereum#initialized inject still signs", async ({ page }) => {
-    await installEvmSignerOnly(page);
+    await installLateEvmWallet(page);
     await page.goto("/sign/evm?property=cl8y.com");
-    await expect(page.getByRole("link", { name: /Open in MetaMask/i })).toBeVisible();
-
-    await injectEvmWalletNow(page);
     await acceptViaConsent(page);
     await expectSignedLatest();
   });

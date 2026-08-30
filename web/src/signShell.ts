@@ -167,7 +167,7 @@ export async function renderSignShell(root: HTMLElement, options: SignShellOptio
   }
 
   btn.onclick = async () => {
-    if (!terms || !checkbox.checked) return;
+    if (!terms || !checkbox.checked || busy) return;
     busy = true;
     syncEnabled();
     try {

@@ -189,30 +189,31 @@ export async function installEvmWalletConnectMock(page: Page) {
   );
 }
 
-export async function installEvmSignerOnly(page: Page) {
+/** Inject `window.ethereum` shortly after load (late MetaMask iOS / WebView). */
+export async function installLateEvmWallet(page: Page, delayMs = 250) {
   await exposeEvmSigner(page);
-}
-
-/** Inject `window.ethereum` after the page has loaded (late MetaMask iOS / WebView). */
-export async function injectEvmWalletNow(page: Page) {
-  const address = testEvmAccount.address;
-  await page.evaluate((account) => {
-    window.ethereum = {
-      request: async ({ method, params }: { method: string; params?: unknown[] }) => {
-        if (method === "eth_requestAccounts") {
-          return [account];
-        }
-        if (method === "personal_sign") {
-          const [hexMessage] = params as [string, string];
-          return await (
-            window as unknown as { __cl8yPersonalSign: (hex: string) => Promise<string> }
-          ).__cl8yPersonalSign(hexMessage);
-        }
-        throw new Error(`Unsupported method: ${method}`);
-      },
-    };
-    window.dispatchEvent(new Event("ethereum#initialized"));
-  }, address);
+  await page.addInitScript(
+    ({ address, delayMs: delay }) => {
+      setTimeout(() => {
+        window.ethereum = {
+          request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+            if (method === "eth_requestAccounts") {
+              return [address];
+            }
+            if (method === "personal_sign") {
+              const [hexMessage] = params as [string, string];
+              return await (
+                window as unknown as { __cl8yPersonalSign: (hex: string) => Promise<string> }
+              ).__cl8yPersonalSign(hexMessage);
+            }
+            throw new Error(`Unsupported method: ${method}`);
+          },
+        };
+        window.dispatchEvent(new Event("ethereum#initialized"));
+      }, delay);
+    },
+    { address: testEvmAccount.address, delayMs },
+  );
 }
 
 export async function evmRequestCount(page: Page): Promise<number> {

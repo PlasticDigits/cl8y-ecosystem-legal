@@ -38,11 +38,15 @@ export async function renderEvm(root: HTMLElement) {
   }
   const extra = el("div", { className: "evm-sign-extras" }, extras);
 
-  void discoverEvmProviders().then((found) => {
-    providers = found;
-    picker.refresh(found, wcOffered);
-    fallback.sync(found.length > 0);
-  });
+  void discoverEvmProviders()
+    .then((found) => {
+      providers = found;
+      picker.refresh(found, wcOffered);
+      fallback.sync(found.length > 0);
+    })
+    .catch(() => {
+      /* keep the waitMs: 0 snapshot */
+    });
 
   await renderSignShell(root, {
     title: "Sign with EVM wallet",

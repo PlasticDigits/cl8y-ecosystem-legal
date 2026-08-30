@@ -116,9 +116,13 @@ export function createEvmMobileFallback(
     root,
     sync(injected) {
       applyHrefs();
-      root.hidden = injected;
       if (injected) {
+        root.hidden = true;
+        root.setAttribute("hidden", "");
         root.classList.remove("evm-mobile-fallback--attention");
+      } else {
+        root.hidden = false;
+        root.removeAttribute("hidden");
       }
     },
     focusCta() {
