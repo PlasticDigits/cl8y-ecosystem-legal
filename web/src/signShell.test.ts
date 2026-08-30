@@ -175,6 +175,67 @@ describe("renderSignShell", () => {
     expect(checkbox.disabled).toBe(true);
   });
 
+  it("re-enables Connect & sign when onSign returns early without throwing", async () => {
+    vi.mocked(getTermsLatest).mockResolvedValue(termsFixture);
+    vi.mocked(getTermsContent).mockResolvedValue("Short terms");
+
+    const root = document.createElement("div");
+    await renderSignShell(root, {
+      title: "Sign with EVM wallet",
+      property: "cl8y.com",
+      appName: null,
+      idleStatus: "Connect your wallet to sign.",
+      onSign: async ({ setStatus }) => {
+        setStatus("No wallet in this browser.", "error");
+      },
+    });
+
+    const termsBody = root.querySelector(".terms-body") as HTMLPreElement;
+    mockScrollMetrics(termsBody, { scrollHeight: 120, clientHeight: 200, scrollTop: 0 });
+    termsBody.dispatchEvent(new Event("scroll"));
+
+    const checkbox = root.querySelector("#terms-consent") as HTMLInputElement;
+    const btn = root.querySelector("button") as HTMLButtonElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change"));
+
+    btn.click();
+    await vi.waitFor(() => {
+      expect(btn.disabled).toBe(false);
+    });
+  });
+
+  it("re-enables Connect & sign after onSign throws", async () => {
+    vi.mocked(getTermsLatest).mockResolvedValue(termsFixture);
+    vi.mocked(getTermsContent).mockResolvedValue("Short terms");
+
+    const root = document.createElement("div");
+    await renderSignShell(root, {
+      title: "Sign with EVM wallet",
+      property: "cl8y.com",
+      appName: null,
+      idleStatus: "Connect your wallet to sign.",
+      onSign: async () => {
+        throw new Error("wallet rejected");
+      },
+    });
+
+    const termsBody = root.querySelector(".terms-body") as HTMLPreElement;
+    mockScrollMetrics(termsBody, { scrollHeight: 120, clientHeight: 200, scrollTop: 0 });
+    termsBody.dispatchEvent(new Event("scroll"));
+
+    const checkbox = root.querySelector("#terms-consent") as HTMLInputElement;
+    const btn = root.querySelector("button") as HTMLButtonElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change"));
+
+    btn.click();
+    await vi.waitFor(() => {
+      expect(btn.disabled).toBe(false);
+    });
+    expect(root.textContent).toMatch(/wallet rejected/);
+  });
+
   it("renders optional extraControls after Connect & sign", async () => {
     vi.mocked(getTermsLatest).mockResolvedValue(termsFixture);
     vi.mocked(getTermsContent).mockResolvedValue("Short terms");

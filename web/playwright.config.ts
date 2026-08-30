@@ -28,6 +28,7 @@ const e2eApiEnv: Record<string, string> = {
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
+  fullyParallel: true,
   workers: 5,
   timeout: 60_000,
   use: {

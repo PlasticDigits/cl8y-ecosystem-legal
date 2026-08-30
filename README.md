@@ -33,6 +33,7 @@ Signing on `cl8y.com` does not satisfy `yieldomega.com`. A version bump requires
 **Web** (`web/.env` for production build):
 
 - `VITE_API_BASE_URL=https://api.terms.cl8y.com`
+- `VITE_WC_PROJECT_ID` — Legal-owned [Reown / WalletConnect Cloud](https://dashboard.reown.com/) project id. Required for Galaxy Station WC v2 on `/sign/terra-classic` **and** in-page EVM WalletConnect on `/sign/evm` (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15)). **Rebuild** the static site after setting it. Do **not** copy ustr-cmm / DEX Cloud ids. LUNC Dash WC v1 does not need this. When unset, EVM still offers Open in MetaMask / Open in Binance Web3 / Copy link.
 
 ```bash
 # Build static site for terms.cl8y.com
@@ -211,6 +212,22 @@ If the integrator passes `account=terra1…` (SDK `buildSignUrl({ account })`), 
 
 **Migration note:** There is no dual-verify for the previous incorrect raw-ECDSA server path — that path never matched production Keplr, so stored Terra proofs (if any) from the broken verifier are not accepted.
 
+### EVM (MetaMask / Binance Web3 / WalletConnect)
+
+Network id: `EVM`. Signature is EIP-191 `personal_sign` of the canonical legal UTF-8 message (not a chain tx). `createWalletClient({ chain: mainnet })` is a viem default only — the portal does not require the wallet to be on Ethereum mainnet.
+
+**How users sign** (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15)):
+
+1. **Injected extension / in-app browser** — EIP-6963, `window.ethereum` / `ethereum.providers[]`, or `window.BinanceChain`. Connect & sign runs `personal_sign`. Several providers → pick one.
+2. **Phone Chrome / Safari (no inject)** — **Open in MetaMask** (documented [`https://link.metamask.io/dapp/…`](https://docs.metamask.io/metamask-connect/evm/guides/metamask-exclusive/use-deeplinks/)), **Open in Binance Web3**, and **Copy link**. Chrome cannot use a desktop extension.
+3. **In-page WalletConnect** — `personal_sign` via Legal-owned `VITE_WC_PROJECT_ID` (hidden when unset). Mobile pairing: **Open MetaMask** / **Open Binance Web3** / **Copy pairing link** (`wc:`).
+
+If the integrator passes `account=0x…` (SDK `buildSignUrl({ account })`), the portal rejects a signature for a different address.
+
+- Invariants: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md)
+- Playwright: mock `window.ethereum`, EIP-6963, BinanceChain, WC hook, missing-provider CTA in `web/e2e/evm-sign.spec.ts`
+- Verify locally: `cd web && npm test && npm run test:e2e -- evm-sign sign-pages` (Playwright workers=5)
+
 ## Portal sign UX (EVM / Terra Classic)
 
 EVM and Terra Classic sign pages share [`web/src/signShell.ts`](web/src/signShell.ts):
@@ -219,6 +236,8 @@ EVM and Terra Classic sign pages share [`web/src/signShell.ts`](web/src/signShel
 2. Show version label, effective date, and scrollable terms body (text nodes only — no `innerHTML`).
 3. **Consent gate:** The agree checkbox stays disabled until the user scrolls the terms body to the bottom (or content fits without scrolling). Connect & sign stays disabled until terms load successfully **and** the user checks *I have read and agree to the Terms & Conditions*.
 4. After wallet connect, if the account already has `signed_latest`, show success without forcing a re-sign.
+
+**EVM mobile (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15)):** `/sign/evm` discovers EIP-6963 / `window.ethereum` / `window.BinanceChain`, and when none is injected shows **Open in MetaMask**, **Open in Binance Web3**, and **Copy link** (portal URL, not a wallet host). In-page WalletConnect `personal_sign` is offered when `VITE_WC_PROJECT_ID` is set. Do not tell phones to install a desktop extension. Integrators should keep redirecting to `sign_urls.evm` (pass `account=0x…` to bind the connected address).
 
 Solana and Telegram sign pages are unchanged for now (see GitLab issue #2). Agent/integrator notes: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md). Related gap analysis: [`gaps/GAP_1786322222.md`](gaps/GAP_1786322222.md).
 

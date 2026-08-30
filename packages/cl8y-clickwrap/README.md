@@ -51,6 +51,8 @@ export function App() {
 
 The hosted portal (`/sign/evm`, `/sign/terra-classic`) shows the **full terms text on-page** with an explicit consent checkbox before wallet connect — see [`skills/portal-sign-disclosure/SKILL.md`](../../skills/portal-sign-disclosure/SKILL.md) and GitLab issue #2. `TermsGate` still links to `GET /api/v1/terms/latest/content` for integrators embedding the gate off-portal.
 
+EVM users on phones should be sent to `sign_urls.evm` (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15)). The portal discovers injected / EIP-6963 / `BinanceChain` providers, offers **Open in MetaMask** / **Open in Binance Web3** / **Copy link** when nothing is injected, and can `personal_sign` via WalletConnect. Integrators do not implement EVM connect; pass `buildSignUrl({ account })` so the portal binds that `0x…`.
+
 ## Headless usage
 
 ```ts
@@ -74,6 +76,7 @@ if (!status.signed_latest) {
   window.location.href = buildSignUrl(terms.sign_urls.evm, {
     redirectUri,
     appName: "My Dapp",
+    account: address,
   });
 }
 
@@ -112,6 +115,8 @@ await client.submitTelegram({ /* … */ });
 | `Telegram`      | `TELEGRAM`       | `telegram`       |
 
 Terra Classic signing on the hosted portal uses ADR-036 (`columbus-5`) for the **ustr-cmm wallet set** (Station, Keplr, Leap, Cosmostation, LUNC Dash, Galaxy Station — GitLab #11). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify or WalletConnect. Pass the connected address as `buildSignUrl({ account })` so the portal binds that `terra1…`. Open in Keplr remains a fallback (GitLab #9). Crypto + wallet-matrix invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
+
+EVM signing on the hosted portal discovers injected EIP-1193 / EIP-6963 providers (including Binance Web3) and, when none is present, offers **Open in MetaMask**, **Open in Binance Web3**, **Copy link**, and in-page WalletConnect `personal_sign` (GitLab #15). Integrators should keep redirecting to `sign_urls.evm` rather than implementing connect in `TermsGate`. Pass `buildSignUrl({ account })` so the portal binds that `0x…`. Invariants: [`skills/portal-sign-disclosure/SKILL.md`](../../skills/portal-sign-disclosure/SKILL.md).
 
 ## Redirect URI safety
 
