@@ -13,9 +13,11 @@ import { el } from "./ui";
  *    terms load successfully AND the user checks "I have read and agree to the Terms & Conditions".
  * 5. Terms metadata + content are fetched once per page load (no refetch on consent toggle).
  * 6. Status updates use a polite live region; load failures use `role="alert"`.
- * 7. Optional `extraControls` is for network-specific CTAs (Terra wallet picker,
- *    WalletConnect pairing, Open in Keplr). EVM omits it. Do not put wallet
- *    secrets or WC project secrets in extra markup.
+ * 7. Optional `extraControls` is for network-specific CTAs. Terra: wallet picker,
+ *    WalletConnect pairing, Open in Keplr. EVM: EIP-1193 picker, WalletConnect
+ *    pairing, Open in MetaMask / Open in Binance Web3 / Copy link (GitLab #15).
+ *    Do not put wallet secrets or WC project secrets in extra markup. Do not
+ *    mount Terra Keplr CTAs on EVM (or EVM CTAs on Terra).
  *
  * Solana / Telegram sign pages are out of scope for this shell (see GitLab #2).
  * Cross-links: skills/portal-sign-disclosure/SKILL.md, README "Portal sign UX".
@@ -34,7 +36,7 @@ export interface SignShellOptions {
   appName: string | null;
   idleStatus: string;
   onSign: (ctx: SignShellContext) => Promise<void>;
-  /** Optional network-specific controls (Terra Open in Keplr). EVM omits this. */
+  /** Optional network-specific controls (Terra Keplr/WC or EVM MetaMask/Binance/WC). */
   extraControls?: HTMLElement;
 }
 
@@ -179,6 +181,10 @@ export async function renderSignShell(root: HTMLElement, options: SignShellOptio
     } catch (e) {
       statusEl.className = "error";
       statusEl.textContent = String(e);
+    } finally {
+      // Always clear busy: EVM/Terra onSign can return early (no wallet) without
+      // throwing — GitLab #10 / #15. If onSign replaced `root` (success), this is
+      // a no-op on detached nodes.
       busy = false;
       syncEnabled();
     }

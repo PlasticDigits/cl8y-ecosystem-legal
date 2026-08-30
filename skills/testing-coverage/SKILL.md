@@ -47,7 +47,7 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 |-------|-------|
 | API unit | `api/src/verify/{evm,terra}.rs`, `api/src/auth.rs`, `api/src/rate_limit.rs`, `api/src/message.rs`, `api/src/account.rs`, `api/src/config.rs` |
 | API integration | `api/tests/integration_test.rs` |
-| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts`, `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts`, `web/src/terra/*.test.ts` |
+| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts`, `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts`, `web/src/terra/*.test.ts`, `web/src/evm/*.test.ts` |
 | SDK unit | `packages/cl8y-clickwrap/src/redirect.test.ts`, `packages/cl8y-clickwrap/src/message.test.ts`, `packages/cl8y-clickwrap/src/client.test.ts` |
 | E2E | `web/e2e/{home,sign-pages,evm-sign,terra-sign,redirect}.spec.ts`, `web/e2e/helpers/{evm-wallet,keplr-wallet,terra-wallets,sign-flow}.ts` |
 | E2E (leave as-is) | `web/e2e/telegram-config.spec.ts` |
@@ -68,6 +68,7 @@ Proves **pure logic** in isolation — no Postgres, no browser, no live GitLab f
 | Message / account | Canonical message build, timestamp skew rules, Terra bech32 normalize | `api/src/message.rs`, `api/src/account.rs` |
 | Sign shell | Terms text-only render, consent gate, load error, extraControls | `web/src/signShell.test.ts` |
 | Keplr mobile fallback | Universal `web-browser` deep link encoding, origin bind, copy-link, idle copy | `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts` |
+| EVM mobile / EIP-6963 / WC | Provider discovery, MetaMask/Binance deeplink allowlist, claimed-account, WC pairing | `web/src/evm/*.test.ts` |
 | Redirect allowlist | Env wiring, evil scheme/origin block | `web/src/redirect.test.ts`, `web/src/ui.test.ts`, `packages/cl8y-clickwrap/src/redirect.test.ts` |
 
 ### Integration (API + Postgres)
@@ -93,8 +94,8 @@ Proves **full stack** — portal UI, mock wallets, authenticated terms publish, 
 | Spec | Proves |
 |------|--------|
 | `home.spec.ts` | Home loads; links to sign routes |
-| `sign-pages.spec.ts` | Missing `property` guard; EVM + Terra terms disclosure + consent gate |
-| `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest` |
+| `sign-pages.spec.ts` | Missing `property` guard; EVM + Terra terms disclosure + consent gate; EVM missing-provider MetaMask/Binance CTAs (no Open in Keplr) |
+| `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest`; missing-provider Open in MetaMask/Binance; EIP-6963; BinanceChain; late inject; WC mock; claimed-account mismatch (GitLab #15) |
 | `terra-sign.spec.ts` | Mock Keplr ADR-036; mock Leap without `window.keplr`; mock LUNC Dash WC; missing-Keplr Open in Keplr CTA; claimed-account mismatch (GitLab #9 / #11) |
 | `redirect.spec.ts` | Allowlisted `redirect_uri` navigates; evil URI shows success without navigation |
 | `telegram-config.spec.ts` | “Not configured” smoke only — **do not expand** for #4 |
@@ -108,7 +109,7 @@ E2E uses **Chromium only**, `workers: 5`, mock `window.ethereum` / `window.keplr
 3. **Fixture keys only** — test private keys in `integration_test.rs`, `evm-wallet.ts`, `keplr-wallet.ts`; never production `ADMIN_TOKEN` or bot tokens.
 4. **Playwright `workers: 5`** — keep `web/playwright.config.ts` at 5 unless CI flake data justifies change.
 5. **Chromium only in CI** — `.gitlab-ci.yml` `test:e2e` installs Chromium; do not add browsers without issue.
-6. **Mock wallets in e2e** — `installEvmWallet` / `installKeplrWallet` / `installLeapWallet` / `installLuncDashWalletConnectMock`; no mandatory real-extension job.
+6. **Mock wallets in e2e** — `installEvmWallet` / `installEip6963Wallet` / `installBinanceChainWallet` / `installEvmWalletConnectMock` / `installKeplrWallet` / `installLeapWallet` / `installLuncDashWalletConnectMock`; no mandatory real-extension job.
 7. **Consent before sign** — e2e full-sign specs use `acceptViaConsent` (scroll terms to bottom + checkbox + Connect & sign); aligns with `portal-sign-disclosure`.
 8. **Redirect hardening** — evil `redirect_uri` must not navigate; success UI still shown. Portal + SDK share allowlist semantics.
 9. **XFF untrusted in e2e** — `TRUSTED_PROXY_CIDRS: ""` in Playwright API env; spoofed XFF must not split rate buckets (unit-tested).
@@ -122,7 +123,7 @@ When adding or changing tests for this issue:
 
 - [ ] In-scope path has coverage at the right layer (unit vs integration vs e2e) — see table above
 - [ ] Terra: CosmJS vector + integration submit + mock Keplr e2e still green (including missing-Keplr Open in Keplr CTA)
-- [ ] EVM: integration + `evm-sign.spec.ts` still green
+- [ ] EVM: integration + `evm-sign.spec.ts` still green (injected, missing-provider, EIP-6963, WC mock)
 - [ ] Terms disclosure: `signShell.test.ts` + `sign-pages.spec.ts` (EVM + Terra) still green
 - [ ] Security: `integration_update_terms_requires_admin_bearer` + `rate_limit.rs` XFF tests still green
 - [ ] Redirect: `redirect.test.ts`, `ui.test.ts`, SDK `redirect.test.ts`, `redirect.spec.ts` still green

@@ -1,18 +1,15 @@
-import { createWalletClient, custom, type Address } from "viem";
-import { mainnet } from "viem/chains";
 import { getStatus, submitWallet } from "../api";
+import { MISSING_EVM_WALLET_STATUS, PICK_EVM_WALLET_STATUS, evmIdleStatus } from "../evm/deeplink";
+import { createEvmMobileFallback } from "../evm/deeplinkUi";
+import { createEvmWalletPicker } from "../evm/pickerUi";
+import { discoverEvmProviders, type DiscoveredEvmProvider } from "../evm/provider";
+import { signEvmMessage } from "../evm/sign";
+import { isEvmWalletConnectOffered } from "../evm/walletConnect";
+import { createEvmWalletConnectPairingSheet } from "../evm/walletConnectUi";
 import { buildWalletMessage } from "../message";
-import { getAppName, getRedirectUri, requireProperty } from "../query";
+import { getAppName, getClaimedAccount, getRedirectUri, requireProperty } from "../query";
 import { renderSignShell } from "../signShell";
-import { renderMissingProperty, renderSuccess } from "../ui";
-
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }
-}
+import { el, renderMissingProperty, renderSuccess } from "../ui";
 
 export async function renderEvm(root: HTMLElement) {
   const property = requireProperty();
@@ -23,42 +20,92 @@ export async function renderEvm(root: HTMLElement) {
 
   const appName = getAppName();
   const redirectUri = getRedirectUri();
+  const claimedAccount = getClaimedAccount();
+  const fallback = createEvmMobileFallback();
+  const picker = createEvmWalletPicker();
+  const pairing = createEvmWalletConnectPairingSheet();
+  const wcOffered = isEvmWalletConnectOffered();
+
+  let providers: DiscoveredEvmProvider[] = await discoverEvmProviders({ waitMs: 0 });
+  picker.refresh(providers, wcOffered);
+  fallback.sync(providers.length > 0);
+
+  const extras: HTMLElement[] = [picker.root, pairing.root, fallback.root];
+  if (claimedAccount) {
+    extras.unshift(
+      el("p", { className: "muted evm-claimed-account" }, [`Sign as ${claimedAccount}`]),
+    );
+  }
+  const extra = el("div", { className: "evm-sign-extras" }, extras);
+
+  void discoverEvmProviders().then((found) => {
+    providers = found;
+    picker.refresh(found, wcOffered);
+    fallback.sync(found.length > 0);
+  });
 
   await renderSignShell(root, {
     title: "Sign with EVM wallet",
     property,
     appName,
-    idleStatus: "Connect your wallet to sign.",
+    idleStatus: evmIdleStatus(providers.length > 0, wcOffered),
+    extraControls: extra,
     onSign: async ({ terms, setStatus }) => {
-      if (!window.ethereum) throw new Error("No EVM wallet found (install MetaMask or similar)");
-      const client = createWalletClient({ chain: mainnet, transport: custom(window.ethereum) });
-      const [address] = (await client.requestAddresses()) as Address[];
-      const accountId = address.toLowerCase();
+      providers = await discoverEvmProviders();
+      picker.refresh(providers, wcOffered);
+      fallback.sync(providers.length > 0);
 
-      const status = await getStatus(property, "EVM", accountId);
-      if (status.signed_latest) {
+      const selected = picker.selected();
+      if (!selected && providers.length === 0) {
+        fallback.focusCta();
+        setStatus(MISSING_EVM_WALLET_STATUS, "error");
+        return;
+      }
+      if (!selected && providers.length > 1) {
+        setStatus(PICK_EVM_WALLET_STATUS, "error");
+        return;
+      }
+
+      let clientTimestamp = new Date();
+      let signedMessage = "";
+      setStatus("Confirm signature in your wallet…");
+
+      const result = await signEvmMessage({
+        selectedId: selected,
+        providers,
+        claimedAccount,
+        pairing,
+        focusFallback: () => fallback.focusCta(),
+        prepare: async (accountId) => {
+          const status = await getStatus(property, "EVM", accountId);
+          if (status.signed_latest) {
+            return { alreadySigned: true };
+          }
+          clientTimestamp = new Date();
+          signedMessage = buildWalletMessage({
+            versionLabel: terms.version_label,
+            effectiveDate: terms.effective_date,
+            contentSha256: terms.content_sha256,
+            property: terms.property,
+            network: "EVM",
+            accountId,
+            clientTimestamp,
+          });
+          return { message: signedMessage };
+        },
+      });
+
+      if ("alreadySigned" in result) {
         renderSuccess(root, terms.version_label, redirectUri);
         return;
       }
 
-      const clientTimestamp = new Date();
-      const message = buildWalletMessage({
-        versionLabel: terms.version_label,
-        effectiveDate: terms.effective_date,
-        contentSha256: terms.content_sha256,
-        property: terms.property,
-        network: "EVM",
-        accountId,
-        clientTimestamp,
-      });
-      setStatus("Confirm signature in your wallet…");
-      const signature = await client.signMessage({ account: address, message });
       await submitWallet({
         property,
         network: "EVM",
-        account_id: accountId,
-        message,
-        signature,
+        account_id: result.accountId,
+        message: signedMessage,
+        signature: result.signature,
         client_timestamp: clientTimestamp.toISOString(),
       });
       renderSuccess(root, terms.version_label, redirectUri);

@@ -33,6 +33,9 @@ test.describe("sign pages require property", () => {
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
     await expectTermsDisclosure(page);
     await expect(page.getByRole("link", { name: /Open in Keplr/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Open in MetaMask/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Open in Binance Web3/i })).toBeVisible();
+    await expect(page.getByText(/install MetaMask/i)).toHaveCount(0);
   });
 
   test("/sign/terra-classic shows property, terms, and consent gate when set", async ({ page }) => {
