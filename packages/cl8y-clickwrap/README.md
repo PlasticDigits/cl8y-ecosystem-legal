@@ -47,7 +47,7 @@ export function App() {
 }
 ```
 
-`TermsGate` polls signature status, shows an accept UI when unsigned, and renders children once `signed_latest` is true. After the user returns from the signing portal, status is re-checked on window focus.
+`TermsGate` polls signature status, shows an accept UI when unsigned, and renders children once `signed_latest` is true. After the user returns from the signing portal, status is re-checked on window focus. **Accept Terms** navigates to the network `sign_urls` entry with `redirect_uri`, `app_name`, and the connected `account` (portal continuity). Do not omit `account` — published `0.1.0` set only `redirect_uri` and `app_name`.
 
 The hosted portal (`/sign/evm`, `/sign/terra-classic`) shows the **full terms text on-page** with an explicit consent checkbox before wallet connect — see [`skills/portal-sign-disclosure/SKILL.md`](../../skills/portal-sign-disclosure/SKILL.md) and GitLab issue #2. `TermsGate` still links to `GET /api/v1/terms/latest/content` for integrators embedding the gate off-portal.
 
@@ -114,7 +114,7 @@ await client.submitTelegram({ /* … */ });
 | `TerraClassic`  | `TERRA_CLASSIC`  | `terra_classic`  |
 | `Telegram`      | `TELEGRAM`       | `telegram`       |
 
-Terra Classic signing on the hosted portal uses ADR-036 (`columbus-5`) for the **ustr-cmm wallet set** (Station, Keplr, Leap, Cosmostation, LUNC Dash, Galaxy Station — GitLab #11). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify or WalletConnect. Pass the connected address as `buildSignUrl({ account })` so the portal binds that `terra1…`. Open in Keplr remains a fallback (GitLab #9). Crypto + wallet-matrix invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
+Terra Classic signing on the hosted portal uses ADR-036 (`columbus-5`) for the **ustr-cmm wallet set** (Station, Keplr, Leap, Cosmostation, LUNC Dash, Galaxy Station — GitLab #11). Integrators should redirect to `sign_urls.terra` / `terra_classic` rather than reimplementing verify or WalletConnect. Pass the connected address as `buildSignUrl({ account })` (and via `TermsGate`’s `account` prop — Accept forwards it) so the portal binds that `terra1…`. Open in Keplr remains a fallback (GitLab #9). Crypto + wallet-matrix invariants: [`skills/terra-classic-adr036/SKILL.md`](../../skills/terra-classic-adr036/SKILL.md).
 
 EVM signing on the hosted portal discovers injected EIP-1193 / EIP-6963 providers (including Binance Web3) and, when none is present, offers **Open in MetaMask**, **Open in Binance Web3**, **Copy link**, and in-page WalletConnect `personal_sign` (GitLab #15). Integrators should keep redirecting to `sign_urls.evm` rather than implementing connect in `TermsGate`. Pass `buildSignUrl({ account })` so the portal binds that `0x…`. Invariants: [`skills/portal-sign-disclosure/SKILL.md`](../../skills/portal-sign-disclosure/SKILL.md).
 
@@ -136,10 +136,15 @@ SDK helpers (optional for integrators; portal still enforces):
 
 ## Publish
 
-From `packages/cl8y-clickwrap`:
+From `packages/cl8y-clickwrap`. Integrators (voting, DEX) consume this from the **GitLab project npm registry** (Legal project id `82547916`), not npmjs.
 
 1. Bump `version` in `package.json`
 2. `npm run build`
-3. `npm publish --access public`
+3. `npm publish` (registry is set in `publishConfig`; auth with a GitLab token that can write the package registry)
 
-Requires publish access to the `@plasticdigits` npm organization.
+```bash
+# one-shot auth for this project (do not commit the token)
+npm publish --access public
+```
+
+Requires Developer+ on `plasticdigits/cl8y-ecosystem-legal` with `write_package_registry` (or a PAT with `api` / `write_repository`).

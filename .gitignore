@@ -79,6 +79,7 @@ temp/
 *.orig
 
 # --- Misc build artifacts ---
+*.tgz
 *.o
 *.a
 *.so

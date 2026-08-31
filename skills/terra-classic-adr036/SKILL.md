@@ -31,7 +31,7 @@ Cross-links:
 - Integration: [`api/tests/integration_test.rs`](../../api/tests/integration_test.rs) (`integration_terra_classic_adr036_*`)
 - Gap note: [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md)
 - Integrator overview: [`README.md`](../../README.md#terra-classic-ustr-cmm-wallet-set)
-- SDK account param: [`packages/cl8y-clickwrap/src/urls.ts`](../../packages/cl8y-clickwrap/src/urls.ts)
+- SDK account param: [`packages/cl8y-clickwrap/src/urls.ts`](../../packages/cl8y-clickwrap/src/urls.ts) (`buildSignUrl({ account })`). `TermsGate` Accept must forward the connected `account` (0.1.1+; 0.1.0 dropped it).
 - CI workflow: [`.gitlab-ci.yml`](../../.gitlab-ci.yml) (MR pipelines must run `test:rust` + `test:e2e`)
 - Tests map: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md)
 - ustr-cmm (connect only, no ADR-036): `skills/frontend-legal-clickwrap` in PlasticDigits2/ustr-cmm

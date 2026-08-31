@@ -83,8 +83,12 @@ export function TermsGate({
       return;
     }
     const baseUrl = terms.sign_urls[NETWORK_SIGN_URL_KEYS[network]];
-    window.location.href = buildSignUrl(baseUrl, { redirectUri, appName });
-  }, [appName, network, redirectUri, terms]);
+    window.location.href = buildSignUrl(baseUrl, {
+      redirectUri,
+      appName,
+      account: account ?? undefined,
+    });
+  }, [account, appName, network, redirectUri, terms]);
 
   if (!account?.trim()) {
     return <>{fallback}</>;

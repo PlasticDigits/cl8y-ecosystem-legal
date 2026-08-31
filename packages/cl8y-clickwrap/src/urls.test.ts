@@ -9,6 +9,7 @@ describe("sign url helpers", () => {
     });
     expect(url).toContain("redirect_uri=");
     expect(url).toContain("app_name=CL8Y");
+    expect(url).not.toContain("account=");
   });
 
   it("buildSignUrl appends claimed account for Terra continuity", () => {
@@ -16,6 +17,13 @@ describe("sign url helpers", () => {
       account: " terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt ",
     });
     expect(url).toContain("account=terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt");
+  });
+
+  it("buildSignUrl omits blank account", () => {
+    const url = buildSignUrl("https://terms.cl8y.com/sign/evm?property=cl8y.com", {
+      account: "   ",
+    });
+    expect(url).not.toContain("account=");
   });
 
   it("appendSignParams updates all network urls", () => {
@@ -28,10 +36,12 @@ describe("sign url helpers", () => {
     const updated = appendSignParams(signUrls, {
       redirectUri: "https://cl8y.com/",
       appName: "CL8Y",
+      account: "0xabc",
     });
     for (const url of Object.values(updated)) {
       expect(url).toContain("redirect_uri=");
       expect(url).toContain("app_name=CL8Y");
+      expect(url).toContain("account=0xabc");
     }
   });
 });

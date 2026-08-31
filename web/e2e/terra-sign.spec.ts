@@ -54,6 +54,7 @@ test.describe("Terra Classic full-stack sign", () => {
     await expect(page.getByText(/Keplr is not in this browser/i)).toBeVisible();
     await expect(open).toBeVisible();
     await expect(page.getByRole("heading", { name: "Accepted" })).toHaveCount(0);
+    await expect(signBtn).toBeEnabled();
   });
 
   test("Leap extension signs without window.keplr", async ({ page }) => {

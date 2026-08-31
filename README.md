@@ -30,7 +30,7 @@ Signing on `cl8y.com` does not satisfy `yieldomega.com`. A version bump requires
 - `LEGAL_PUBLIC_BASE_URL=https://terms.cl8y.com` — sign links in JSON point at the web app
 - `CORS_ORIGINS=https://terms.cl8y.com` — allow the legal portal (add dapp origins as needed, e.g. `https://cl8y.com`)
 
-**Web** (`web/.env` for production build):
+**Web** (`web/.env` for production Coolify build):
 
 - `VITE_API_BASE_URL=https://api.terms.cl8y.com`
 - `VITE_WC_PROJECT_ID` — Legal-owned [Reown / WalletConnect Cloud](https://dashboard.reown.com/) project id. Required for Galaxy Station WC v2 on `/sign/terra-classic` **and** in-page EVM WalletConnect on `/sign/evm` (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15)). **Rebuild** the static site after setting it. Do **not** copy ustr-cmm / DEX Cloud ids. LUNC Dash WC v1 does not need this. When unset, EVM still offers Open in MetaMask / Open in Binance Web3 / Copy link.
@@ -204,7 +204,7 @@ The portal signs ADR-036 `sign/MsgSignData` and the API verifies CosmJS-compatib
 2. **Phone Chrome (LUNC Dash / Galaxy Station)** — pick that wallet; approve the in-page pairing sheet (**Open {wallet}** + **Copy pairing link**). Do not switch to Keplr.
 3. **Open in Keplr fallback** (GitLab [#9](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/9)) — documented [universal web-browser deeplink](https://docs.keplr.app/api/mobile/deeplink) + **Copy link**. Still works when no other wallet is chosen.
 
-If the integrator passes `account=terra1…` (SDK `buildSignUrl({ account })`), the portal rejects a signature for a different address.
+If the integrator passes `account=terra1…` (`TermsGate` Accept or `buildSignUrl({ account })`, SDK **0.1.1+**), the portal rejects a signature for a different address. Published `0.1.0` `TermsGate` omitted `account=` on Accept.
 
 - Crypto + wallet-matrix invariants: [`skills/terra-classic-adr036/SKILL.md`](skills/terra-classic-adr036/SKILL.md)
 - Playwright: mock Keplr, mock Leap (no `window.keplr`), mock LUNC Dash WC, missing-Keplr CTA in `web/e2e/terra-sign.spec.ts`

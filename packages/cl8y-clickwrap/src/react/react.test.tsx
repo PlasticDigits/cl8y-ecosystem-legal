@@ -73,6 +73,7 @@ describe("useSignatureStatus", () => {
 describe("TermsGate", () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   it("renders children when signed", async () => {
@@ -110,5 +111,61 @@ describe("TermsGate", () => {
       expect(screen.getByRole("button", { name: "Accept Terms" })).toBeTruthy();
       expect(screen.queryByText("protected content")).toBeNull();
     });
+  });
+
+  it("passes the connected account into the portal sign URL", async () => {
+    const loc = { href: "https://ust1cmm.com/" };
+    vi.stubGlobal("location", loc);
+    const client = mockClient();
+    const account = "terra180pg6mvjmyrnld0r4h6gz7274azxhnhd30spzt";
+
+    render(
+      <TermsGate
+        client={client}
+        property="ust1cmm.com"
+        network="TerraClassic"
+        account={account}
+        redirectUri="https://ust1cmm.com/"
+        appName="ustr-cmm"
+      >
+        <p>protected content</p>
+      </TermsGate>,
+    );
+
+    const button = await screen.findByRole("button", { name: "Accept Terms" });
+    button.click();
+
+    expect(loc.href).toContain("sign/terra-classic");
+    expect(loc.href).toContain(`account=${account}`);
+    expect(loc.href).toContain("redirect_uri=");
+    expect(loc.href).toContain("app_name=ustr-cmm");
+  });
+
+  it("passes a connected EVM account into the portal sign URL", async () => {
+    const loc = { href: "https://vote.cl8y.com/" };
+    vi.stubGlobal("location", loc);
+    const client = mockClient();
+    const account = "0x742d35cc6634c0532925a3b844bc9e7595f0beb0";
+
+    render(
+      <TermsGate
+        client={client}
+        property="vote.cl8y.com"
+        network="EVM"
+        account={account}
+        redirectUri="https://vote.cl8y.com/"
+        appName="CL8Y Voting"
+      >
+        <p>protected content</p>
+      </TermsGate>,
+    );
+
+    const button = await screen.findByRole("button", { name: "Accept Terms" });
+    button.click();
+
+    expect(loc.href).toContain("sign/evm");
+    expect(loc.href).toContain(`account=${account}`);
+    expect(loc.href).toContain("redirect_uri=");
+    expect(loc.href).toContain("app_name=CL8Y+Voting");
   });
 });
