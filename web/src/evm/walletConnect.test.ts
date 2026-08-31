@@ -57,7 +57,10 @@ describe("connectAndSignEvmWalletConnect claimed-account bind", () => {
 
   it("throws EVM_ACCOUNT_MISMATCH for hostile claimed values before prepare", async () => {
     const prepare = vi.fn(async () => ({ accountId: other, message: "nope" }));
-    window.__CL8Y_EVM_WC_TEST__ = async (hookPrepare) => hookPrepare(other);
+    window.__CL8Y_EVM_WC_TEST__ = async (hookPrepare) => {
+      await hookPrepare(other);
+      return { accountId: other, signature: "0xdead" };
+    };
 
     for (const hostile of ["javascript:alert(1)", "terra1abc", "0x123"]) {
       prepare.mockClear();
