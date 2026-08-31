@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { EVM_ACCOUNT_MISMATCH } from "./account";
 import { MISSING_EVM_WALLET_STATUS, PICK_EVM_WALLET_STATUS } from "./deeplink";
 import type { DiscoveredEvmProvider, Eip1193Provider } from "./provider";
@@ -20,6 +20,10 @@ function discovered(id: string, provider: Eip1193Provider): DiscoveredEvmProvide
 }
 
 describe("signEvmMessage", () => {
+  afterEach(() => {
+    delete window.__CL8Y_EVM_WC_TEST__;
+  });
+
   it("focuses the mobile fallback when no wallet is selected or injected", async () => {
     const focus = vi.fn();
     await expect(
@@ -72,6 +76,53 @@ describe("signEvmMessage", () => {
         prepare: async () => ({ message: "nope" }),
       }),
     ).rejects.toThrow(EVM_ACCOUNT_MISMATCH);
+  });
+
+  it("signs when claimed checksum matches the connected lowercase address", async () => {
+    const connected = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const methods: string[] = [];
+    const provider: Eip1193Provider = {
+      request: async ({ method }) => {
+        methods.push(method);
+        if (method === "eth_requestAccounts") {
+          return [connected];
+        }
+        if (method === "personal_sign") {
+          return `0x${"ab".repeat(65)}`;
+        }
+        throw new Error(method);
+      },
+    };
+    const result = await signEvmMessage({
+      selectedId: "injected:ethereum",
+      providers: [discovered("injected:ethereum", provider)],
+      claimedAccount: "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      pairing: stubSheet(),
+      focusFallback: () => {},
+      prepare: async (accountId) => ({ message: `legal:${accountId}` }),
+    });
+    expect("signature" in result && result.accountId).toBe(connected);
+    expect(methods).toContain("personal_sign");
+  });
+
+  it("rejects WalletConnect when the session account is not the claimed account", async () => {
+    let signed = 0;
+    window.__CL8Y_EVM_WC_TEST__ = async (prepare) => {
+      const prepared = await prepare("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+      signed += 1;
+      return { accountId: prepared.accountId, signature: "0xdead" };
+    };
+    await expect(
+      signEvmMessage({
+        selectedId: WALLETCONNECT_ID,
+        providers: [],
+        claimedAccount: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        pairing: stubSheet(),
+        focusFallback: () => {},
+        prepare: async () => ({ message: "nope" }),
+      }),
+    ).rejects.toThrow(EVM_ACCOUNT_MISMATCH);
+    expect(signed).toBe(0);
   });
 
   it("signs with the selected provider, not a sibling", async () => {

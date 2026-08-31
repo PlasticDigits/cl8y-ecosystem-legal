@@ -68,7 +68,7 @@ Proves **pure logic** in isolation — no Postgres, no browser, no live GitLab f
 | Message / account | Canonical message build, timestamp skew rules, Terra bech32 normalize | `api/src/message.rs`, `api/src/account.rs` |
 | Sign shell | Terms text-only render, consent gate, load error, extraControls | `web/src/signShell.test.ts` |
 | Keplr mobile fallback | Universal `web-browser` deep link encoding, origin bind, copy-link, idle copy | `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts` |
-| EVM mobile / EIP-6963 / WC | Provider discovery, MetaMask/Binance deeplink allowlist, claimed-account, WC pairing | `web/src/evm/*.test.ts` |
+| EVM mobile / EIP-6963 / WC | Provider discovery, MetaMask/Binance deeplink allowlist, claimed-account match/mismatch/hostile, WC pairing + WC mismatch | `web/src/evm/*.test.ts` |
 | Redirect allowlist | Env wiring, evil scheme/origin block | `web/src/redirect.test.ts`, `web/src/ui.test.ts`, `packages/cl8y-clickwrap/src/redirect.test.ts` |
 
 ### Integration (API + Postgres)
@@ -95,7 +95,7 @@ Proves **full stack** — portal UI, mock wallets, authenticated terms publish, 
 |------|--------|
 | `home.spec.ts` | Home loads; links to sign routes |
 | `sign-pages.spec.ts` | Missing `property` guard; EVM + Terra terms disclosure + consent gate; EVM missing-provider MetaMask/Binance CTAs (no Open in Keplr) |
-| `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest`; missing-provider Open in MetaMask/Binance; EIP-6963; BinanceChain; late inject; WC mock; claimed-account mismatch (GitLab #15) |
+| `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest`; missing-provider Open in MetaMask/Binance; EIP-6963; BinanceChain; late inject; WC mock; claimed-account **match** (lower + EIP-55), injected mismatch, WC mismatch, deeplink `account=`, hostile `account=` (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15) / [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16)) |
 | `terra-sign.spec.ts` | Mock Keplr ADR-036; mock Leap without `window.keplr`; mock LUNC Dash WC; missing-Keplr Open in Keplr CTA; claimed-account mismatch (GitLab #9 / #11) |
 | `redirect.spec.ts` | Allowlisted `redirect_uri` navigates; evil URI shows success without navigation |
 | `telegram-config.spec.ts` | “Not configured” smoke only — **do not expand** for #4 |
@@ -123,7 +123,7 @@ When adding or changing tests for this issue:
 
 - [ ] In-scope path has coverage at the right layer (unit vs integration vs e2e) — see table above
 - [ ] Terra: CosmJS vector + integration submit + mock Keplr e2e still green (including missing-Keplr Open in Keplr CTA)
-- [ ] EVM: integration + `evm-sign.spec.ts` still green (injected, missing-provider, EIP-6963, WC mock)
+- [ ] EVM: integration + `evm-sign.spec.ts` still green (injected, missing-provider, EIP-6963, WC mock, matching `account=`, WC mismatch, deeplink `account=`)
 - [ ] Terms disclosure: `signShell.test.ts` + `sign-pages.spec.ts` (EVM + Terra) still green
 - [ ] Security: `integration_update_terms_requires_admin_bearer` + `rate_limit.rs` XFF tests still green
 - [ ] Redirect: `redirect.test.ts`, `ui.test.ts`, SDK `redirect.test.ts`, `redirect.spec.ts` still green
