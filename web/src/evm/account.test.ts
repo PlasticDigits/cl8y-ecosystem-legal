@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   EVM_ACCOUNT_MISMATCH,
   assertEvmAccountContinuity,
@@ -16,6 +16,9 @@ describe("canonicalizeEvmAddress", () => {
     expect(canonicalizeEvmAddress("terra1abc")).toBeNull();
     expect(canonicalizeEvmAddress("0x123")).toBeNull();
     expect(canonicalizeEvmAddress("")).toBeNull();
+    expect(canonicalizeEvmAddress("javascript:alert(1)")).toBeNull();
+    expect(canonicalizeEvmAddress("data:text/html,hi")).toBeNull();
+    expect(canonicalizeEvmAddress("https://evil.example")).toBeNull();
   });
 });
 
@@ -32,6 +35,18 @@ describe("assertEvmAccountContinuity", () => {
     expect(() =>
       assertEvmAccountContinuity(a, "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
     ).toThrow(EVM_ACCOUNT_MISMATCH);
+  });
+
+  it("fails closed on hostile or non-EVM claimed values", () => {
+    for (const claimed of [
+      "javascript:alert(1)",
+      "data:text/html,hi",
+      "https://evil.example",
+      "terra1abc",
+      "0x123",
+    ]) {
+      expect(() => assertEvmAccountContinuity(claimed, a)).toThrow(EVM_ACCOUNT_MISMATCH);
+    }
   });
 
   it("passes through when no claimed account", () => {

@@ -77,4 +77,52 @@ describe("createEvmMobileFallback", () => {
     expect(mm.getAttribute("href")).toBeNull();
     expect(mm.getAttribute("aria-disabled")).toBe("true");
   });
+
+  it("preserves account= on MetaMask, Binance, and Copy link; never uses it as an href target", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const claimed =
+      "https://terms.cl8y.com/sign/evm?property=dex.cl8y.com&redirect_uri=https%3A%2F%2Fdex.cl8y.com&account=0x2222222222222222222222222222222222222222";
+
+    const fallback = createEvmMobileFallback(
+      () => claimed,
+      () => "https://terms.cl8y.com",
+    );
+    fallback.sync(false);
+
+    const mm = fallback.root.querySelector("#open-in-metamask") as HTMLAnchorElement;
+    const bnb = fallback.root.querySelector("#open-in-binance-web3") as HTMLAnchorElement;
+    expect(mm.href.startsWith(`${METAMASK_DEEPLINK_ORIGIN}/dapp/`)).toBe(true);
+    expect(mm.href).toContain("account=0x2222222222222222222222222222222222222222");
+    expect(mm.href).not.toBe("0x2222222222222222222222222222222222222222");
+    expect(mm.href.startsWith("javascript:")).toBe(false);
+    const target = new URL(bnb.href).searchParams.get("url");
+    expect(target).toBe(claimed);
+    expect(target).not.toBe("https://dex.cl8y.com");
+
+    const copy = fallback.root.querySelector("#copy-evm-sign-link") as HTMLButtonElement;
+    copy.click();
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(claimed);
+    });
+    expect(writeText).not.toHaveBeenCalledWith("https://dex.cl8y.com");
+  });
+
+  it("does not turn a hostile account= query into a javascript: or data: href", () => {
+    const page =
+      "https://terms.cl8y.com/sign/evm?property=cl8y.com&account=javascript:alert(1)&redirect_uri=https%3A%2F%2Fcl8y.com";
+    const fallback = createEvmMobileFallback(
+      () => page,
+      () => "https://terms.cl8y.com",
+    );
+    fallback.sync(false);
+    const mm = fallback.root.querySelector("#open-in-metamask") as HTMLAnchorElement;
+    const bnb = fallback.root.querySelector("#open-in-binance-web3") as HTMLAnchorElement;
+    expect(mm.getAttribute("href")?.startsWith("javascript:")).toBeFalsy();
+    expect(mm.getAttribute("href")?.startsWith("data:")).toBeFalsy();
+    expect(mm.href.startsWith(`${METAMASK_DEEPLINK_ORIGIN}/dapp/`)).toBe(true);
+    expect(mm.href).toContain("account=javascript");
+    expect(bnb.href.startsWith(`${BINANCE_DAPP_LINK_PREFIX}?url=`)).toBe(true);
+    expect(bnb.href.startsWith("javascript:")).toBe(false);
+  });
 });

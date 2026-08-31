@@ -1,9 +1,12 @@
 /**
- * EVM address binding for portal sign (GitLab #15).
+ * EVM address binding for portal sign (GitLab #15 / #16).
  *
  * Lockstep with API `normalize_account` for `EVM`: lowercase `0x` + 40 hex.
  * Checksum addresses compare equal to their lowercase form.
- * Integrator `account=0x…` (SDK `buildSignUrl({ account })`) is continuity, not a redirect.
+ * Integrator `account=0x…` (SDK `buildSignUrl({ account })`) is continuity, not a
+ * redirect: never pass it to `location`, `<a href>`, or Open-in-app targets except
+ * as the existing query key on the portal sign URL. Invalid claimed values
+ * (`javascript:`, `terra1…`, short hex) fail closed with the same mismatch copy.
  */
 
 export const EVM_ACCOUNT_MISMATCH =

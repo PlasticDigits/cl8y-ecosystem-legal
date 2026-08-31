@@ -32,6 +32,7 @@ export async function renderEvm(root: HTMLElement) {
 
   const extras: HTMLElement[] = [picker.root, pairing.root, fallback.root];
   if (claimedAccount) {
+    // Text node only — query `account` is never an href (GitLab #16).
     extras.unshift(
       el("p", { className: "muted evm-claimed-account" }, [`Sign as ${claimedAccount}`]),
     );

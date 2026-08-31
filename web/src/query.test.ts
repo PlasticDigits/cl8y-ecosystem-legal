@@ -39,4 +39,13 @@ describe("query params", () => {
     setSearch("account=");
     expect(getClaimedAccount()).toBeNull();
   });
+
+  it("does not treat account= as a redirect target", () => {
+    setSearch("account=javascript:alert(1)");
+    expect(getClaimedAccount()).toBe("javascript:alert(1)");
+    expect(getRedirectUri()).toBeNull();
+    setSearch("account=https://evil.example&redirect_uri=https%3A%2F%2Fcl8y.com");
+    expect(getClaimedAccount()).toBe("https://evil.example");
+    expect(getRedirectUri()).toBe("https://cl8y.com");
+  });
 });

@@ -222,11 +222,11 @@ Network id: `EVM`. Signature is EIP-191 `personal_sign` of the canonical legal U
 2. **Phone Chrome / Safari (no inject)** — **Open in MetaMask** (documented [`https://link.metamask.io/dapp/…`](https://docs.metamask.io/metamask-connect/evm/guides/metamask-exclusive/use-deeplinks/)), **Open in Binance Web3**, and **Copy link**. Chrome cannot use a desktop extension.
 3. **In-page WalletConnect** — `personal_sign` via Legal-owned `VITE_WC_PROJECT_ID` (hidden when unset). Mobile pairing: **Open MetaMask** / **Open Binance Web3** / **Copy pairing link** (`wc:`).
 
-If the integrator passes `account=0x…` (SDK `buildSignUrl({ account })`), the portal rejects a signature for a different address.
+If the integrator passes `account=0x…` (`TermsGate` Accept or `buildSignUrl({ account })`, SDK **0.1.1+**), the portal rejects a signature for a different address. Matching `account=` + the connected wallet records **that** account (GitLab [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16)). Query `account` is portal UX only — the API still recovers the EIP-191 signer.
 
-- Invariants: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md)
-- Playwright: mock `window.ethereum`, EIP-6963, BinanceChain, WC hook, missing-provider CTA in `web/e2e/evm-sign.spec.ts`
-- Verify locally: `cd web && npm test && npm run test:e2e -- evm-sign sign-pages` (Playwright workers=5)
+- Invariants: [`skills/portal-sign-disclosure/SKILL.md`](skills/portal-sign-disclosure/SKILL.md) (invariant 13), [`skills/testing-coverage/SKILL.md`](skills/testing-coverage/SKILL.md)
+- Playwright: mock `window.ethereum`, EIP-6963, BinanceChain, WC hook, missing-provider CTA, matching `account=` / WC mismatch / deeplink `account=` / hostile query in `web/e2e/evm-sign.spec.ts`
+- Verify locally: `cd web && npx vitest run src/evm src/query.test.ts && npm run test:e2e -- evm-sign` (Playwright workers=5)
 
 ## Portal sign UX (EVM / Terra Classic)
 

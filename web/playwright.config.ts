@@ -5,12 +5,16 @@ import { defineConfig } from "@playwright/test";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const apiDir = path.join(__dirname, "..", "api");
 
+/** Default 5173 (CI). Override when another process already owns that port. */
+const WEB_PORT = process.env.PLAYWRIGHT_WEB_PORT ?? "5173";
+const WEB_ORIGIN = `http://127.0.0.1:${WEB_PORT}`;
+
 const e2eApiEnv: Record<string, string> = {
   DATABASE_URL:
     process.env.DATABASE_URL ?? "postgres://cl8y_legal:cl8y_legal@127.0.0.1:5432/cl8y_legal",
   LISTEN_ADDR: "127.0.0.1:8080",
-  LEGAL_PUBLIC_BASE_URL: "http://127.0.0.1:5173",
-  CORS_ORIGINS: "http://127.0.0.1:5173",
+  LEGAL_PUBLIC_BASE_URL: WEB_ORIGIN,
+  CORS_ORIGINS: WEB_ORIGIN,
   ALLOW_LOCALHOST_PROPERTY: "true",
   TERMS_SYNC_ON_STARTUP: "false",
   TERMS_SYNC_INTERVAL_HOURS: "24",
@@ -32,7 +36,7 @@ export default defineConfig({
   workers: 5,
   timeout: 60_000,
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: WEB_ORIGIN,
   },
   webServer: [
     {
@@ -49,8 +53,8 @@ export default defineConfig({
       },
     },
     {
-      command: "npm run dev -- --host 127.0.0.1 --port 5173 --strictPort",
-      url: "http://127.0.0.1:5173",
+      command: `npm run dev -- --host 127.0.0.1 --port ${WEB_PORT} --strictPort`,
+      url: WEB_ORIGIN,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
       env: {

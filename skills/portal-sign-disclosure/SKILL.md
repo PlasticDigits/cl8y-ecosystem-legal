@@ -2,7 +2,7 @@
 
 Guidance for third-party / agent players changing CL8Y Legal signing UX.
 
-**Issue:** GitLab [#2](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/2)  
+**Issue:** GitLab [#2](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/2) (disclosure), [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15) / [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16) (EVM wallets + `account=` continuity)  
 **Gap:** [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) (Portal UX — terms disclosure)  
 **Implementation:** [`web/src/signShell.ts`](../../web/src/signShell.ts) (EVM + Terra Classic)
 
@@ -26,7 +26,7 @@ Guidance for third-party / agent players changing CL8Y Legal signing UX.
 10. **EVM extraControls are in scope.** Terra and EVM both pass `extraControls` into `renderSignShell`. Do **not** strip EVM CTAs as “out of scope.” Do **not** mount Open in Keplr / Terra picker on `/sign/evm`, or MetaMask/Binance CTAs on Terra.
 11. **EVM deep-link target is this portal sign URL** (`origin + pathname + search`). Never encode query-supplied `redirect_uri` as the Open-in-app target. Fail closed on non-http(s) and origin mismatch (`web/src/evm/deeplink.ts`). Copy-link copies the portal URL, not a wallet host.
 12. **EVM WalletConnect** uses Legal-owned `VITE_WC_PROJECT_ID` (same as Galaxy Station). Hide WC when unset. `personal_sign` of the canonical legal UTF-8 message only — no `eth_sign` of a hash, no silent EIP-712/SIWE. Pairing hrefs: user-gesture `<a>` + allowlist (`wc:`, MetaMask, Binance `cedefi`). Do not copy DEX/ustr-cmm Cloud ids.
-13. **Account continuity:** if `account=0x…` is on the query string, a different connected address is a hard fail (GitLab #11 continuity). Recovered signer must still match `account_id` server-side.
+13. **Account continuity (GitLab #11 Terra / #15–#16 EVM):** if `account=` is on the query string, a different connected address is a hard fail. `account` is not a URL — never pass it to `location`, `<a href>`, WalletConnect pairing, or Open-in-app targets except as the existing query **key** on the portal sign URL. EVM compares lowercase `0x`+40 hex (EIP-55 vs lower must succeed; invalid/`javascript:`/`terra1` fail closed). *Sign as …* is a text node (`el()` / `textContent`). Recovered signer must still match `account_id` server-side (`verify/evm.rs`); do not trust query `account` on `POST /signatures/wallet`. No claim → sign whatever valid address the wallet returns.
 14. **EIP-1193 discovery:** resolve from EIP-6963, `ethereum.providers[]`, `window.ethereum`, `window.BinanceChain`; wait briefly for late inject. Several providers → user pick; never silently sign with a hidden wallet.
 15. **Safe wallet markup:** wallet names, pairing URIs, and query values stay text nodes / attributes. Never `innerHTML` of EIP-6963 `icon` SVGs.
 
@@ -42,9 +42,9 @@ Prefer `renderSignShell` in `web/src/signShell.ts` over duplicating markup in ne
 Full layer map: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md).
 
 - Unit: `web/src/signShell.test.ts` (XSS-as-text, consent gate, load error, optional `extraControls`)
-- Unit: `web/src/evm/*.test.ts` (provider discovery, deeplink allowlist, claimed-account, WC pairing)
+- Unit: `web/src/evm/*.test.ts` (provider discovery, deeplink allowlist, claimed-account match/mismatch/hostile, WC pairing + WC mismatch)
 - E2E: `web/e2e/sign-pages.spec.ts` (terms visible + gate on EVM/Terra; EVM has no Open in Keplr, does show Open in MetaMask when no provider)
-- E2E: `web/e2e/evm-sign.spec.ts` (injected mock, EIP-6963, BinanceChain, late inject, WC mock, missing-provider CTA, claimed-account mismatch)
+- E2E: `web/e2e/evm-sign.spec.ts` (injected mock, EIP-6963, BinanceChain, late inject, WC mock, missing-provider CTA, matching `account=` + WC mismatch + deeplink `account=` + hostile query — GitLab [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16))
 - Terra wallets: `web/e2e/terra-sign.spec.ts` (Keplr, Leap, LUNC Dash WC mock, missing-Keplr CTA) + `web/src/terra/*.test.ts` + `web/src/keplrMobile*.test.ts`
 
 ## Out of scope unless asked

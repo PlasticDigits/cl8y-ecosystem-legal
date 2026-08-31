@@ -7,6 +7,9 @@ export const TEST_PRIVATE_KEY =
 
 export const testEvmAccount = privateKeyToAccount(TEST_PRIVATE_KEY);
 
+/** Distinct 0x used as a sibling EIP-6963 / WC-mismatch claimed account (not the fixture key). */
+export const OTHER_EVM_ACCOUNT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 function hexToUtf8(hex: string): string {
   const h = hex.startsWith("0x") ? hex.slice(2) : hex;
   const bytes = new Uint8Array(h.length / 2);
@@ -92,15 +95,18 @@ export async function installEip6963Wallet(
   );
 }
 
-/** Two EIP-6963 wallets; only MetaMask can sign (Binance throws). */
-export async function installTwoEip6963Wallets(page: Page) {
+/** Two EIP-6963 wallets. MetaMask signs the fixture key; Binance returns `otherAddress` and refuses `personal_sign`. */
+export async function installTwoEip6963Wallets(
+  page: Page,
+  opts: { otherAddress?: string } = {},
+) {
   await exposeEvmSigner(page);
   await page.addInitScript(
-    ({ address }) => {
-      const make = (allowSign: boolean) => ({
+    ({ address, otherAddress }) => {
+      const make = (account: string, allowSign: boolean) => ({
         request: async ({ method, params }: { method: string; params?: unknown[] }) => {
           if (method === "eth_requestAccounts") {
-            return [address];
+            return [account];
           }
           if (method === "personal_sign") {
             if (!allowSign) {
@@ -114,8 +120,8 @@ export async function installTwoEip6963Wallets(page: Page) {
           throw new Error(`Unsupported method: ${method}`);
         },
       });
-      const mm = make(true);
-      const bn = make(false);
+      const mm = make(address, true);
+      const bn = make(otherAddress, false);
       window.addEventListener("eip6963:requestProvider", () => {
         window.dispatchEvent(
           new CustomEvent("eip6963:announceProvider", {
@@ -135,7 +141,10 @@ export async function installTwoEip6963Wallets(page: Page) {
         );
       });
     },
-    { address: testEvmAccount.address },
+    {
+      address: testEvmAccount.address,
+      otherAddress: opts.otherAddress ?? testEvmAccount.address,
+    },
   );
 }
 
