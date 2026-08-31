@@ -50,6 +50,9 @@ test.describe("sign pages require property", () => {
     await page.goto("/sign/solana?property=cl8y.com");
     await expect(page.getByText("Property: cl8y.com")).toBeVisible();
     await expect(page.getByRole("button", { name: /Connect & sign/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Open in MetaMask/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Open in Keplr/i })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Terms & Conditions" })).toHaveCount(0);
   });
 
   test("/sign/telegram shows channel property when set", async ({ page }) => {

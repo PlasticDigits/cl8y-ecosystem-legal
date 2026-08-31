@@ -177,7 +177,7 @@ All acceptance endpoints require `property` (hostname or Telegram `chat_id`).
 | POST | `/api/v1/signatures/wallet` |
 | POST | `/api/v1/signatures/telegram` |
 
-Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`, `/sign/terra-classic?property=cl8y.com`, `/sign/telegram?property=-100…`
+Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`, `/sign/terra-classic?property=cl8y.com`, `/sign/telegram?property=-100…`, `/sign/solana?property=cl8y.com`
 
 Rate limits: per-IP (see `.env.example`).
 
@@ -228,6 +228,16 @@ If the integrator passes `account=0x…` (`TermsGate` Accept or `buildSignUrl({ 
 - Playwright: mock `window.ethereum`, EIP-6963, BinanceChain, WC hook, missing-provider CTA, matching `account=` / WC mismatch / deeplink `account=` / hostile query in `web/e2e/evm-sign.spec.ts`
 - Verify locally: `cd web && npx vitest run src/evm src/query.test.ts && npm run test:e2e -- evm-sign` (Playwright workers=5)
 
+### Solana (Phantom)
+
+Network id: `SOLANA`. Portal `/sign/solana` still uses injected `window.solana` only (no wallet-adapter / mobile deeplinks). Integrator `account=` is bound the same way as EVM/Terra (GitLab [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17)): *Sign as* is a text node; a different connected pubkey fails closed (*This page is for a different wallet*); already `signed_latest` skips `signMessage`. Addresses are **case-sensitive** 32-byte bs58 — never lowercase. Query `account` is portal UX only.
+
+**Envelope P0 (unchanged):** the portal `signMessage`s raw UTF-8; the API verifies the Solana off-chain envelope. Full-stack `signed_latest` from this page will fail until that alignment ships. Do not treat bind tests as envelope coverage.
+
+- Invariants: [`skills/solana-account-bind/SKILL.md`](skills/solana-account-bind/SKILL.md)
+- Playwright: mock `window.solana` match / mismatch / hostile / already-signed in `web/e2e/solana-sign.spec.ts` (does not require `signed_latest`)
+- Verify locally: `cd web && npx vitest run src/solana src/query.test.ts src/base58.test.ts && npm run test:e2e -- solana-sign` (Playwright workers=5)
+
 ## Portal sign UX (EVM / Terra Classic)
 
 EVM and Terra Classic sign pages share [`web/src/signShell.ts`](web/src/signShell.ts):
@@ -262,7 +272,7 @@ The package provides an API client, URL/poll helpers, and React components (`Ter
 
 Requires Postgres on `DATABASE_URL` (see `.env.example`). End-to-end tests start the Rust API with `ADMIN_TOKEN=test-admin` and publish terms via authenticated `POST /update_terms` (network access to GitLab raw URL, or an already-published DB).
 
-**Coverage focus (GitLab [#4](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/4)):** **EVM** and **Terra Classic** wallet verify/submit/status are proven at unit, API integration, and Playwright e2e (mock wallets). **Portal** pages assert terms disclosure, consent gating, and `redirect_uri` allowlisting. Security ops from #3 (`/update_terms` Bearer, XFF trust, admin routes) have API unit + integration coverage; e2e global-setup uses Bearer sync. **Out of scope for #4:** new Telegram/Solana e2e, OpenAPI. Bot fail-closed unit tests are under GitLab [#5](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/5) (`cd bot && cargo test`) — see [`skills/testing-coverage/SKILL.md`](skills/testing-coverage/SKILL.md), [`skills/bot-enforcement/SKILL.md`](skills/bot-enforcement/SKILL.md), and related skills ([`terra-classic-adr036`](skills/terra-classic-adr036/SKILL.md), [`security-ops`](skills/security-ops/SKILL.md), [`portal-sign-disclosure`](skills/portal-sign-disclosure/SKILL.md)).
+**Coverage focus (GitLab [#4](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/4)):** **EVM** and **Terra Classic** wallet verify/submit/status are proven at unit, API integration, and Playwright e2e (mock wallets). **Portal** pages assert terms disclosure, consent gating, and `redirect_uri` allowlisting. Security ops from #3 (`/update_terms` Bearer, XFF trust, admin routes) have API unit + integration coverage; e2e global-setup uses Bearer sync. **Out of scope for #4:** new Telegram e2e, OpenAPI. Solana **account= bind** (not envelope) is GitLab [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17) (`web/e2e/solana-sign.spec.ts`). Bot fail-closed unit tests are under GitLab [#5](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/5) (`cd bot && cargo test`) — see [`skills/testing-coverage/SKILL.md`](skills/testing-coverage/SKILL.md), [`skills/bot-enforcement/SKILL.md`](skills/bot-enforcement/SKILL.md), [`skills/solana-account-bind/SKILL.md`](skills/solana-account-bind/SKILL.md), and related skills ([`terra-classic-adr036`](skills/terra-classic-adr036/SKILL.md), [`security-ops`](skills/security-ops/SKILL.md), [`portal-sign-disclosure`](skills/portal-sign-disclosure/SKILL.md)).
 
 ```bash
 source "$HOME/.cargo/env"

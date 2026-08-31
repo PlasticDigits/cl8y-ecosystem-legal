@@ -9,8 +9,9 @@ export interface SignUrlOptions {
   redirectUri?: string;
   appName?: string;
   /**
-   * Connected account for portal continuity (Terra Classic `terra1…`).
-   * The portal rejects a signature for a different address (GitLab #11).
+   * Connected account for portal continuity (Terra Classic `terra1…`, EVM `0x…`,
+   * Solana base58 pubkey). The portal rejects a signature for a different
+   * address (GitLab #11 / #15 / #17). Never a redirect target.
    */
   account?: string;
 }

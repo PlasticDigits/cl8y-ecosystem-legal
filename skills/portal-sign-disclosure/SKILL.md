@@ -2,7 +2,7 @@
 
 Guidance for third-party / agent players changing CL8Y Legal signing UX.
 
-**Issue:** GitLab [#2](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/2) (disclosure), [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15) / [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16) (EVM wallets + `account=` continuity)  
+**Issue:** GitLab [#2](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/2) (disclosure), [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15) / [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16) (EVM wallets + `account=` continuity), [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17) (Solana `account=` bind — not this shell)  
 **Gap:** [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) (Portal UX — terms disclosure)  
 **Implementation:** [`web/src/signShell.ts`](../../web/src/signShell.ts) (EVM + Terra Classic)
 
@@ -26,7 +26,7 @@ Guidance for third-party / agent players changing CL8Y Legal signing UX.
 10. **EVM extraControls are in scope.** Terra and EVM both pass `extraControls` into `renderSignShell`. Do **not** strip EVM CTAs as “out of scope.” Do **not** mount Open in Keplr / Terra picker on `/sign/evm`, or MetaMask/Binance CTAs on Terra.
 11. **EVM deep-link target is this portal sign URL** (`origin + pathname + search`). Never encode query-supplied `redirect_uri` as the Open-in-app target. Fail closed on non-http(s) and origin mismatch (`web/src/evm/deeplink.ts`). Copy-link copies the portal URL, not a wallet host.
 12. **EVM WalletConnect** uses Legal-owned `VITE_WC_PROJECT_ID` (same as Galaxy Station). Hide WC when unset. `personal_sign` of the canonical legal UTF-8 message only — no `eth_sign` of a hash, no silent EIP-712/SIWE. Pairing hrefs: user-gesture `<a>` + allowlist (`wc:`, MetaMask, Binance `cedefi`). Do not copy DEX/ustr-cmm Cloud ids.
-13. **Account continuity (GitLab #11 Terra / #15–#16 EVM):** if `account=` is on the query string, a different connected address is a hard fail. `account` is not a URL — never pass it to `location`, `<a href>`, WalletConnect pairing, or Open-in-app targets except as the existing query **key** on the portal sign URL. EVM compares lowercase `0x`+40 hex (EIP-55 vs lower must succeed; invalid/`javascript:`/`terra1` fail closed). *Sign as …* is a text node (`el()` / `textContent`). Recovered signer must still match `account_id` server-side (`verify/evm.rs`); do not trust query `account` on `POST /signatures/wallet`. No claim → sign whatever valid address the wallet returns.
+13. **Account continuity (GitLab #11 Terra / #15–#16 EVM / #17 Solana):** if `account=` is on the query string, a different connected address is a hard fail. `account` is not a URL — never pass it to `location`, `<a href>`, WalletConnect pairing, or Open-in-app targets except as the existing query **key** on the portal sign URL. EVM compares lowercase `0x`+40 hex (EIP-55 vs lower must succeed; invalid/`javascript:`/`terra1` fail closed). Solana compares **decoded 32-byte** pubkeys (case-sensitive bs58; never lowercase) — [`solana-account-bind`](../solana-account-bind/SKILL.md). *Sign as …* is a text node (`el()` / `textContent`). Recovered signer must still match `account_id` server-side; do not trust query `account` on `POST /signatures/wallet`. No claim → sign whatever valid address the wallet returns.
 14. **EIP-1193 discovery:** resolve from EIP-6963, `ethereum.providers[]`, `window.ethereum`, `window.BinanceChain`; wait briefly for late inject. Several providers → user pick; never silently sign with a hidden wallet.
 15. **Safe wallet markup:** wallet names, pairing URIs, and query values stay text nodes / attributes. Never `innerHTML` of EIP-6963 `icon` SVGs.
 
@@ -46,10 +46,11 @@ Full layer map: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.m
 - E2E: `web/e2e/sign-pages.spec.ts` (terms visible + gate on EVM/Terra; EVM has no Open in Keplr, does show Open in MetaMask when no provider)
 - E2E: `web/e2e/evm-sign.spec.ts` (injected mock, EIP-6963, BinanceChain, late inject, WC mock, missing-provider CTA, matching `account=` + WC mismatch + deeplink `account=` + hostile query — GitLab [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16))
 - Terra wallets: `web/e2e/terra-sign.spec.ts` (Keplr, Leap, LUNC Dash WC mock, missing-Keplr CTA) + `web/src/terra/*.test.ts` + `web/src/keplrMobile*.test.ts`
+- Solana bind (not disclosure): `web/src/solana/account.test.ts` + `web/e2e/solana-sign.spec.ts` (GitLab [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17), [`solana-account-bind`](../solana-account-bind/SKILL.md))
 
 ## Out of scope unless asked
 
-- Solana / Telegram sign-page disclosure (reuse `renderSignShell` when ready)
+- Solana / Telegram sign-page disclosure (reuse `renderSignShell` when ready). Solana **account= bind** is a separate thin-page change — not this shell.
 - i18n, full redesign, RainbowKit / wagmi app-wide modal
 - Treating the UI consent checkbox as authentication (server still requires a valid wallet signature)
 - Weakening API EIP-191 verify (`api/src/verify/evm.rs`)

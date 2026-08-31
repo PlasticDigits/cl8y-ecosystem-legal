@@ -29,9 +29,11 @@ export function getAppName(): string | null {
 }
 
 /**
- * Integrator-connected `terra1…` or EVM `0x…` for continuity.
+ * Integrator-connected `terra1…`, EVM `0x…`, or Solana base58 pubkey for continuity.
  * Terra Classic rejects a signature for a different address (GitLab #11).
  * EVM binds via `assertEvmAccountContinuity` (GitLab #15 / #16).
+ * Solana binds via `assertSolanaAccountContinuity` (GitLab #17) — byte-level,
+ * case-sensitive; never lowercase.
  * Never treat this as a redirect target, `<a href>`, or Open-in-app URL.
  */
 export function getClaimedAccount(): string | null {

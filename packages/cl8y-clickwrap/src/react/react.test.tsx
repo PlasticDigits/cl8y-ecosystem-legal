@@ -168,4 +168,32 @@ describe("TermsGate", () => {
     expect(loc.href).toContain("redirect_uri=");
     expect(loc.href).toContain("app_name=CL8Y+Voting");
   });
+
+  it("passes a connected Solana account into the portal sign URL", async () => {
+    const loc = { href: "https://example.com/" };
+    vi.stubGlobal("location", loc);
+    const client = mockClient();
+    const account = "29d2S7vB453rNYFdR5Ycwt7y9haRT5fwVwL9zTmBhfV2";
+
+    render(
+      <TermsGate
+        client={client}
+        property="cl8y.com"
+        network="Solana"
+        account={account}
+        redirectUri="https://cl8y.com/"
+        appName="Demo"
+      >
+        <p>protected content</p>
+      </TermsGate>,
+    );
+
+    const button = await screen.findByRole("button", { name: "Accept Terms" });
+    button.click();
+
+    expect(loc.href).toContain("sign/solana");
+    expect(loc.href).toContain(`account=${account}`);
+    expect(loc.href).toContain("redirect_uri=");
+    expect(loc.href).toContain("app_name=Demo");
+  });
 });

@@ -38,6 +38,8 @@ describe("query params", () => {
     expect(getClaimedAccount()).toBe("terra1abc");
     setSearch("account=");
     expect(getClaimedAccount()).toBeNull();
+    setSearch("account=29d2S7vB453rNYFdR5Ycwt7y9haRT5fwVwL9zTmBhfV2");
+    expect(getClaimedAccount()).toBe("29d2S7vB453rNYFdR5Ycwt7y9haRT5fwVwL9zTmBhfV2");
   });
 
   it("does not treat account= as a redirect target", () => {

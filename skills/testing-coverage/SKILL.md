@@ -35,6 +35,7 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 | Security ops (auth, XFF, redirect) | [`skills/security-ops/SKILL.md`](../security-ops/SKILL.md) |
 | Portal terms disclosure | [`skills/portal-sign-disclosure/SKILL.md`](../portal-sign-disclosure/SKILL.md) |
 | Bot fail-closed compliance (#5) | [`skills/bot-enforcement/SKILL.md`](../bot-enforcement/SKILL.md) |
+| Solana `account=` bind (#17) | [`skills/solana-account-bind/SKILL.md`](../solana-account-bind/SKILL.md) |
 | Gap analysis § Testing | [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md) |
 | Run commands | [`README.md`](../../README.md#tests) |
 | CI jobs | [`.gitlab-ci.yml`](../../.gitlab-ci.yml) |
@@ -47,9 +48,9 @@ Bundles unit, integration, Playwright e2e, and CI wiring that prove issues **#1*
 |-------|-------|
 | API unit | `api/src/verify/{evm,terra}.rs`, `api/src/auth.rs`, `api/src/rate_limit.rs`, `api/src/message.rs`, `api/src/account.rs`, `api/src/config.rs` |
 | API integration | `api/tests/integration_test.rs` |
-| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts`, `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts`, `web/src/terra/*.test.ts`, `web/src/evm/*.test.ts` |
+| Web unit | `web/src/signShell.test.ts`, `web/src/ui.test.ts`, `web/src/redirect.test.ts`, `web/src/query.test.ts`, `web/src/keplrMobile.test.ts`, `web/src/keplrMobileUi.test.ts`, `web/src/terra/*.test.ts`, `web/src/evm/*.test.ts`, `web/src/solana/*.test.ts`, `web/src/base58.test.ts` |
 | SDK unit | `packages/cl8y-clickwrap/src/redirect.test.ts`, `packages/cl8y-clickwrap/src/message.test.ts`, `packages/cl8y-clickwrap/src/client.test.ts` |
-| E2E | `web/e2e/{home,sign-pages,evm-sign,terra-sign,redirect}.spec.ts`, `web/e2e/helpers/{evm-wallet,keplr-wallet,terra-wallets,sign-flow}.ts` |
+| E2E | `web/e2e/{home,sign-pages,evm-sign,terra-sign,solana-sign,redirect}.spec.ts`, `web/e2e/helpers/{evm-wallet,keplr-wallet,terra-wallets,solana-wallet,sign-flow}.ts` |
 | E2E (leave as-is) | `web/e2e/telegram-config.spec.ts` |
 
 ## What each layer proves
@@ -97,6 +98,7 @@ Proves **full stack** — portal UI, mock wallets, authenticated terms publish, 
 | `sign-pages.spec.ts` | Missing `property` guard; EVM + Terra terms disclosure + consent gate; EVM missing-provider MetaMask/Binance CTAs (no Open in Keplr) |
 | `evm-sign.spec.ts` | Mock Ethereum wallet → accept → `signed_latest`; missing-provider Open in MetaMask/Binance; EIP-6963; BinanceChain; late inject; WC mock; claimed-account **match** (lower + EIP-55), injected mismatch, WC mismatch, deeplink `account=`, hostile `account=` (GitLab [#15](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/15) / [#16](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/16)) |
 | `terra-sign.spec.ts` | Mock Keplr ADR-036; mock Leap without `window.keplr`; mock LUNC Dash WC; missing-Keplr Open in Keplr CTA; claimed-account mismatch (GitLab #9 / #11) |
+| `solana-sign.spec.ts` | Mock `window.solana` **account= bind only** (GitLab [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17)): *Sign as*, match message/`account_id`, mismatch/hostile no submit, already-signed skips `signMessage`. Does **not** require `signed_latest` (UTF-8 vs off-chain envelope P0). See [`solana-account-bind`](../solana-account-bind/SKILL.md). |
 | `redirect.spec.ts` | Allowlisted `redirect_uri` navigates; evil URI shows success without navigation |
 | `telegram-config.spec.ts` | “Not configured” smoke only — **do not expand** for #4 |
 
@@ -109,12 +111,12 @@ E2E uses **Chromium only**, `workers: 5`, mock `window.ethereum` / `window.keplr
 3. **Fixture keys only** — test private keys in `integration_test.rs`, `evm-wallet.ts`, `keplr-wallet.ts`; never production `ADMIN_TOKEN` or bot tokens.
 4. **Playwright `workers: 5`** — keep `web/playwright.config.ts` at 5 unless CI flake data justifies change.
 5. **Chromium only in CI** — `.gitlab-ci.yml` `test:e2e` installs Chromium; do not add browsers without issue.
-6. **Mock wallets in e2e** — `installEvmWallet` / `installEip6963Wallet` / `installBinanceChainWallet` / `installEvmWalletConnectMock` / `installKeplrWallet` / `installLeapWallet` / `installLuncDashWalletConnectMock`; no mandatory real-extension job.
+6. **Mock wallets in e2e** — `installEvmWallet` / `installEip6963Wallet` / `installBinanceChainWallet` / `installEvmWalletConnectMock` / `installKeplrWallet` / `installLeapWallet` / `installLuncDashWalletConnectMock` / `installSolanaWallet`; no mandatory real-extension job.
 7. **Consent before sign** — e2e full-sign specs use `acceptViaConsent` (scroll terms to bottom + checkbox + Connect & sign); aligns with `portal-sign-disclosure`.
 8. **Redirect hardening** — evil `redirect_uri` must not navigate; success UI still shown. Portal + SDK share allowlist semantics.
 9. **XFF untrusted in e2e** — `TRUSTED_PROXY_CIDRS: ""` in Playwright API env; spoofed XFF must not split rate buckets (unit-tested).
 10. **Canonical message golden** — Rust + SDK message tests stay aligned when changing `buildWalletMessage` (must include `Content-SHA256`; see GitLab #6 / `security-ops`).
-11. **Do not require Telegram/Solana e2e** for closing #4 — leave `telegram-config.spec.ts` minimal; Solana verify mismatch remains a separate P0.
+11. **Do not require Telegram/Solana e2e** for closing #4 — leave `telegram-config.spec.ts` minimal; Solana verify mismatch remains a separate P0. GitLab [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17) may add Solana **bind** e2e without requiring envelope `signed_latest`.
 12. **MR pipelines run full test matrix** — `.gitlab-ci.yml` `workflow:rules` ensures `test:rust`, `test:web`, `test:e2e` on MRs (not gitleaks-only).
 
 ## Agent checklist
@@ -149,7 +151,7 @@ npm ci && npm run test:sdk && npm run test:web
 cd web && npm run test:e2e
 
 # Targeted e2e subsets
-cd web && npm run test:e2e -- evm-sign terra-sign redirect sign-pages
+cd web && npm run test:e2e -- evm-sign terra-sign redirect sign-pages solana-sign
 ```
 
 CI mirrors: `test:rust`, `test:rust-bot`, `test:clickwrap`, `test:web`, `test:e2e` in [`.gitlab-ci.yml`](../../.gitlab-ci.yml).
@@ -187,4 +189,4 @@ Maps GitLab #4 acceptance criteria to concrete tests (close #4 when all rows are
 
 **Proven in CI today:** EVM and Terra Classic wallet paths from crypto verify through DB status; portal terms disclosure and consent on EVM/Terra sign pages; admin Bearer on `/update_terms` and `/admin/*`; redirect allowlist; XFF trust policy; authenticated e2e global-setup.
 
-**Explicit non-goals (#4):** Telegram WebApp HMAC, Solana envelope alignment, OpenAPI, real-wallet extension smoke, multi-browser matrix. Bot fail-closed unit tests are owned by [#5](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/5) / [`bot-enforcement`](../bot-enforcement/SKILL.md).
+**Explicit non-goals (#4):** Telegram WebApp HMAC, Solana envelope alignment, OpenAPI, real-wallet extension smoke, multi-browser matrix. Bot fail-closed unit tests are owned by [#5](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/5) / [`bot-enforcement`](../bot-enforcement/SKILL.md). Solana `account=` bind coverage is owned by [#17](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/17) / [`solana-account-bind`](../solana-account-bind/SKILL.md) and must not require envelope `signed_latest`.
