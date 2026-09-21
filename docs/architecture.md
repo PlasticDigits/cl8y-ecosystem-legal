@@ -42,7 +42,10 @@ Signing on `cl8y.com` does not satisfy `yieldomega.com`.
 
 Protected `main` is **not** CODEOWNERS. The standing gate is Forgejo branch
 protection owned by [cl8y-forgejo#48](https://git.cl8y.com/PlasticDigits/cl8y-forgejo/issues/48)
-/ [docs/INVARIANTS.md](https://git.cl8y.com/PlasticDigits/cl8y-forgejo/src/branch/main/docs/INVARIANTS.md):
+(still **open** pending product AC5 deletes) /
+[docs/INVARIANTS.md](https://git.cl8y.com/PlasticDigits/cl8y-forgejo/src/branch/main/docs/INVARIANTS.md).
+[cl8y-forgejo#50](https://git.cl8y.com/PlasticDigits/cl8y-forgejo/issues/50)
+merged the forge policy/protection rollout; it did not close #48.
 
 - no direct push (`enable_push: false`)
 - required status `ci/woodpecker/pr/woodpecker`
@@ -51,17 +54,22 @@ protection owned by [cl8y-forgejo#48](https://git.cl8y.com/PlasticDigits/cl8y-fo
 - `block_on_rejected_reviews: true`
 - never `force_merge`
 
-This tree must not carry a catch-all `CODEOWNERS` (`.* @code/maintainers`)
-at repo root, `docs/`, or `.forgejo/` — that file plants official review
-requests on every PR and is not a merge gate. Adding CODEOWNERS in a PR
-does not restore the official-review **block** (protection PATCH is
+**Target after ADR 0001 slice 2** (false at this design SHA): this tree
+carries no catch-all `CODEOWNERS` (`.* @code/maintainers`) at repo root,
+`docs/`, or `.forgejo/`. Until implement, root `CODEOWNERS` still exists
+on this tip and on `main`. That file plants official review requests on
+every PR and is not a merge gate. Adding CODEOWNERS in a later PR does
+not restore the official-review **block** (protection PATCH is
 admin-only). CAC still requires tip `RECOMMEND: ACCEPT` plus green
 Woodpecker; that controller policy is not implemented here
 ([cl8y-agent-control#429](https://git.cl8y.com/PlasticDigits/cl8y-agent-control/issues/429)).
 
 `.gitlab-ci.yml` is a GitLab leftover. Absence of `.woodpecker.yaml` in
 this tree does not change the required Forgejo context; adding Woodpecker
-YAML is a separate CI slice, not ADR 0001.
+YAML is a separate CI slice, not ADR 0001. Org #48 AC5 for this repo
+(file gone from `main`) stays open until that context exists. A
+still-on-`main` file after the occupying PR tip is updated is the land
+wait, not an implement defect. See [ADR 0001](adr/0001-remove-catchall-codeowners.md).
 
 ## Invariants (product)
 
