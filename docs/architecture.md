@@ -54,11 +54,12 @@ merged the forge policy/protection rollout; it did not close #48.
 - `block_on_rejected_reviews: true`
 - never `force_merge`
 
-**Target after ADR 0001 slice 2** (false at this design SHA): this tree
-carries no catch-all `CODEOWNERS` (`.* @code/maintainers`) at repo root,
-`docs/`, or `.forgejo/`. Until implement, root `CODEOWNERS` still exists
-on this tip and on `main`. That file plants official review requests on
-every PR and is not a merge gate. Adding CODEOWNERS in a later PR does
+Forgejo loads CODEOWNERS from the default branch
+(`CODEOWNERS`, `docs/CODEOWNERS`, `.gitea/CODEOWNERS`,
+`.forgejo/CODEOWNERS`) and plants official review requests for files
+changed from merge-base to head. [ADR 0001](adr/0001-remove-catchall-codeowners.md)
+deletes the catch-all (`.* @code/maintainers`). Plants continue while
+that file remains on `main`. Re-adding CODEOWNERS in a later PR does
 not restore the official-review **block** (protection PATCH is
 admin-only). CAC still requires tip `RECOMMEND: ACCEPT` plus green
 Woodpecker; that controller policy is not implemented here
@@ -66,10 +67,10 @@ Woodpecker; that controller policy is not implemented here
 
 `.gitlab-ci.yml` is a GitLab leftover. Absence of `.woodpecker.yaml` in
 this tree does not change the required Forgejo context; adding Woodpecker
-YAML is a separate CI slice, not ADR 0001. Org #48 AC5 for this repo
-(file gone from `main`) stays open until that context exists. A
-still-on-`main` file after the occupying PR tip is updated is the land
-wait, not an implement defect. See [ADR 0001](adr/0001-remove-catchall-codeowners.md).
+YAML is a separate CI slice, not ADR 0001. Org #48 AC5 for this repo is
+catch-all gone from `main`. Missing `ci/woodpecker/pr/woodpecker` is that
+land gate, not a reason to add YAML here. See
+[ADR 0001](adr/0001-remove-catchall-codeowners.md).
 
 ## Invariants (product)
 
