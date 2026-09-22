@@ -11,12 +11,10 @@ Central service for CL8Y ecosystem Terms & Conditions: global legal versions, **
 ## Concepts
 
 - **Terms version** — global (one latest at a time). Published from [`TERMS_AND_CONDITIONS.txt`](TERMS_AND_CONDITIONS.txt).
-- **Property** — where acceptance applies:
-  - Website: `cl8y.com`, `yieldomega.com`
-  - Telegram channel: `-1001234567890` (chat id)
+- **Property** — where acceptance applies (hostname or Telegram `chat_id`). First-party wallet dapps use dedicated hostnames (`dex.cl8y.com`, `bridge.cl8y.com`). The marketing site `https://cl8y.com` is a **documented exception** — it does not mount TermsGate or call the status API ([`skills/integrator-coverage/SKILL.md`](skills/integrator-coverage/SKILL.md)).
 - **Signature** — one record per `(property, terms version, network, account)`.
 
-Signing on `cl8y.com` does not satisfy `yieldomega.com`. A version bump requires re-signing on each property.
+Signing on one property does not satisfy another (e.g. `dex.cl8y.com` ≠ `bridge.cl8y.com` ≠ `yieldomega.com`). A version bump requires re-signing on each property.
 
 ## Production
 
@@ -28,7 +26,7 @@ Signing on `cl8y.com` does not satisfy `yieldomega.com`. A version bump requires
 **API** (`.env` on the API host — see [`.env.example`](.env.example)):
 
 - `LEGAL_PUBLIC_BASE_URL=https://terms.cl8y.com` — sign links in JSON point at the web app
-- `CORS_ORIGINS=https://terms.cl8y.com` — allow the legal portal (add dapp origins as needed, e.g. `https://cl8y.com`)
+- `CORS_ORIGINS=https://terms.cl8y.com` — allow the legal portal (add **gated dapp** origins, e.g. `https://dex.cl8y.com,https://bridge.cl8y.com`; marketing `cl8y.com` does not need CORS for a simple Terms portal link)
 
 **Web** (`web/.env` for production Coolify build):
 
@@ -72,8 +70,8 @@ cp .env.example .env
 
 cp web/.env.example web/.env
 # For local dev: VITE_API_BASE_URL=  (empty — Vite proxies /api)
-# Optional redirects after Accept:
-#   VITE_REDIRECT_URI_ALLOWLIST=https://cl8y.com
+# Optional redirects after Accept (gated dapp origins, exact HTTPS):
+#   VITE_REDIRECT_URI_ALLOWLIST=https://dex.cl8y.com,https://bridge.cl8y.com
 #   VITE_ALLOW_LOCALHOST_REDIRECT=true
 ```
 
@@ -140,6 +138,7 @@ Website hostnames (and Telegram chat ids) can still be auto-upserted by public t
 
 ```bash
 ./scripts/register-property.sh dex.cl8y.com "CL8Y DEX"
+./scripts/register-property.sh bridge.cl8y.com "CL8Y Bridge"
 ./scripts/register-property.sh --list
 ```
 
@@ -171,13 +170,15 @@ All acceptance endpoints require `property` (hostname or Telegram `chat_id`).
 
 | Method | Path |
 |--------|------|
-| GET | `/api/v1/terms/latest?property=cl8y.com` |
-| GET | `/api/v1/terms/latest/content?property=cl8y.com` |
-| GET | `/api/v1/signatures/status?property=cl8y.com&network=EVM&account=0x…` |
+| GET | `/api/v1/terms/latest?property=dex.cl8y.com` |
+| GET | `/api/v1/terms/latest/content?property=dex.cl8y.com` |
+| GET | `/api/v1/signatures/status?property=bridge.cl8y.com&network=EVM&account=0x…` |
 | POST | `/api/v1/signatures/wallet` |
 | POST | `/api/v1/signatures/telegram` |
 
-Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=cl8y.com`, `/sign/terra-classic?property=cl8y.com`, `/sign/telegram?property=-100…`, `/sign/solana?property=cl8y.com`
+Signing UI (web app at `https://terms.cl8y.com`): `/sign/evm?property=dex.cl8y.com`, `/sign/terra-classic?property=bridge.cl8y.com`, `/sign/telegram?property=-100…`, `/sign/solana?property=dex.cl8y.com`
+
+Integrator coverage for first-party hosts: [`skills/integrator-coverage/SKILL.md`](skills/integrator-coverage/SKILL.md).
 
 Rate limits: per-IP (see `.env.example`).
 

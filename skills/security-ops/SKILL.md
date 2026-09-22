@@ -11,7 +11,7 @@ description: >-
 
 # Security ops (portal + API)
 
-Cross-links: GitLab issues **[#3](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/3)** (auth/ops) and **[#6](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/6)** (terms oracle), gap items in [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md), env templates [`.env.example`](../../.env.example) / [`web/.env.example`](../../web/.env.example), root [`README.md`](../../README.md). Tests: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md). Audit context: [`audits/INTERNAL_COMPOSER_1786408744.md`](../../audits/INTERNAL_COMPOSER_1786408744.md) (H4).
+Cross-links: GitLab issues **[#3](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/3)** (auth/ops) and **[#6](https://gitlab.com/plasticdigits/cl8y-ecosystem-legal/-/issues/6)** (terms oracle), first-party CORS/allowlist matrix [`skills/integrator-coverage/SKILL.md`](../integrator-coverage/SKILL.md) (#34), gap items in [`gaps/GAP_1786322222.md`](../../gaps/GAP_1786322222.md), env templates [`.env.example`](../../.env.example) / [`web/.env.example`](../../web/.env.example), root [`README.md`](../../README.md). Tests: [`skills/testing-coverage/SKILL.md`](../testing-coverage/SKILL.md). Audit context: [`audits/INTERNAL_COMPOSER_1786408744.md`](../../audits/INTERNAL_COMPOSER_1786408744.md) (H4).
 
 ## Invariants (do not regress)
 

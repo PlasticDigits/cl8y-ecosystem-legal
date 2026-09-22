@@ -7,10 +7,13 @@ describe("portal redirect env wiring", () => {
   });
 
   it("parses allowlist and localhost flag", () => {
-    vi.stubEnv("VITE_REDIRECT_URI_ALLOWLIST", "https://cl8y.com, https://app.example.com");
+    vi.stubEnv(
+      "VITE_REDIRECT_URI_ALLOWLIST",
+      "https://bridge.cl8y.com, https://dex.cl8y.com, https://app.example.com",
+    );
     vi.stubEnv("VITE_ALLOW_LOCALHOST_REDIRECT", "true");
     expect(getRedirectAllowlistOptions()).toEqual({
-      allowlist: ["https://cl8y.com", "https://app.example.com"],
+      allowlist: ["https://bridge.cl8y.com", "https://dex.cl8y.com", "https://app.example.com"],
       allowLocalhost: true,
     });
     expect(safeRedirectUri("http://127.0.0.1:5173/x")).toBe("http://127.0.0.1:5173/x");
@@ -19,7 +22,7 @@ describe("portal redirect env wiring", () => {
   it("defaults to deny-all redirects when unset", () => {
     vi.stubEnv("VITE_REDIRECT_URI_ALLOWLIST", "");
     vi.stubEnv("VITE_ALLOW_LOCALHOST_REDIRECT", "");
-    expect(safeRedirectUri("https://cl8y.com/")).toBeNull();
+    expect(safeRedirectUri("https://bridge.cl8y.com/transfer")).toBeNull();
     expect(safeRedirectUri("javascript:alert(1)")).toBeNull();
   });
 });
