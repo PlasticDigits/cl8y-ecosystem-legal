@@ -18,7 +18,9 @@ npm install react react-dom
 
 ## Prerequisites
 
-- Your site hostname must be registered as a **property** (e.g. `cl8y.com`).
+`TermsGate` is for **wallet-connected integrators** (a `network` plus a connected `account`). Marketing hosts such as `https://cl8y.com` need an explicit exception and must not mount this package — see [`skills/integrator-coverage/SKILL.md`](../../skills/integrator-coverage/SKILL.md).
+
+- Your site hostname must be registered as a **property** (e.g. `dex.cl8y.com` or `bridge.cl8y.com`).
 - For browser-side API calls, your origin must be listed in the API server's `CORS_ORIGINS`.
 
 ## Quick start (React)
@@ -35,7 +37,7 @@ export function App() {
   return (
     <TermsGate
       client={client}
-      property="cl8y.com"
+      property="dex.cl8y.com"
       network="EVM"
       account={address}
       redirectUri={window.location.href}
@@ -65,12 +67,12 @@ import {
 
 const client = createClient();
 
-const status = await client.getSignatureStatus("cl8y.com", "EVM", address);
+const status = await client.getSignatureStatus("dex.cl8y.com", "EVM", address);
 if (!status.signed_latest) {
-  const terms = await client.getTermsLatest("cl8y.com");
+  const terms = await client.getTermsLatest("dex.cl8y.com");
   const redirectUri = window.location.href;
   // Portal enforces VITE_REDIRECT_URI_ALLOWLIST; preflight locally if you want fail-fast UX.
-  if (!isAllowedRedirectUri(redirectUri, { allowlist: ["https://cl8y.com"], allowLocalhost: true })) {
+  if (!isAllowedRedirectUri(redirectUri, { allowlist: ["https://dex.cl8y.com"], allowLocalhost: true })) {
     throw new Error("redirect_uri is not allowlisted on the signing portal");
   }
   window.location.href = buildSignUrl(terms.sign_urls.evm, {
@@ -82,7 +84,7 @@ if (!status.signed_latest) {
 
 // Optional: wait after redirect-back
 await pollUntilSigned(client, {
-  property: "cl8y.com",
+  property: "dex.cl8y.com",
   network: "EVM",
   account: address,
 });
@@ -98,9 +100,9 @@ const client = createClient({
   termsBaseUrl: "https://terms.cl8y.com",   // default
 });
 
-await client.getTermsLatest("cl8y.com");
-await client.getTermsContent("cl8y.com");
-await client.getSignatureStatus("cl8y.com", "EVM", "0x…");
+await client.getTermsLatest("dex.cl8y.com");
+await client.getTermsContent("dex.cl8y.com");
+await client.getSignatureStatus("dex.cl8y.com", "EVM", "0x…");
 await client.submitWallet({ /* … */ });
 await client.submitTelegram({ /* … */ });
 ```

@@ -4,7 +4,7 @@ description: >-
   TermsGate coverage matrix for first-party CL8Y hosts: which origins are
   wallet-gated integrators vs documented marketing exceptions. Use when
   registering properties, editing CORS_ORIGINS, VITE_REDIRECT_URI_ALLOWLIST,
-  README API examples, or deciding whether to mount @plasticdigits/cl8y-clickwrap.
+  README or SDK README examples, or deciding whether to mount @plasticdigits/cl8y-clickwrap.
 ---
 
 # Integrator coverage (first-party hosts)
@@ -30,6 +30,7 @@ Acceptance is **per property** (hostname). One signature row per `(property, ter
 3. **Never share properties across hosts** — bridge clients must send `bridge.cl8y.com` only; DEX sends `dex.cl8y.com` only.
 4. **Solana** — integrators stay fail-closed if `/sign/solana` cannot produce a verifiable signature; do not add “skip Solana legal” env flags in Legal or dapps.
 5. **Do not treat T&Cs as a Privacy Notice** — marketing footer “Terms” is not `/privacy` / cookies / opt-out ([CL8Y-web#12](https://git.cl8y.com/code/CL8Y-web/issues/12)).
+6. **SDK README examples use a gated property.** `packages/cl8y-clickwrap/README.md` must say TermsGate is for wallet-connected integrators, point marketing hosts at this exception, and copy-paste `dex.cl8y.com` or `bridge.cl8y.com` — never `cl8y.com` as the default integrator.
 
 ## Ops checklist (gated dapp)
 
@@ -56,10 +57,11 @@ curl -sSI -X OPTIONS 'https://api.terms.cl8y.com/api/v1/signatures/status' \
 
 ## Agent checklist
 
-- [ ] README public API examples use a **gated** property (`dex.cl8y.com` or `bridge.cl8y.com`), not `cl8y.com` as the default integrator.
+- [ ] Root `README.md` and `packages/cl8y-clickwrap/README.md` use a **gated** property (`dex.cl8y.com` or `bridge.cl8y.com`). The SDK README states the wallet-integrator rule and the marketing exception. Do not use `cl8y.com` as the default integrator.
 - [ ] Adding TermsGate to `cl8y.com` requires a **new** issue and matrix update — SDK needs `network` + `account`.
 - [ ] New first-party wallet UI → new row in this matrix before code merge.
 - [ ] Portal redirect tests in `web/e2e/redirect.spec.ts` stay green; allowlist unit tests cover production origins.
+- [ ] Playwright `VITE_REDIRECT_URI_ALLOWLIST=https://cl8y.com` in `web/playwright.config.ts` is a **dev fixture** (plus localhost). It is not the production matrix and does not mean the marketing host is gated. Production origins are `https://dex.cl8y.com` and `https://bridge.cl8y.com`.
 
 ## Key files
 
@@ -69,3 +71,4 @@ curl -sSI -X OPTIONS 'https://api.terms.cl8y.com/api/v1/signatures/status' \
 | API CORS | `api/src/config.rs`, `.env.example` |
 | Portal allowlist | `web/src/redirect.ts`, `web/.env.example` |
 | SDK | `packages/cl8y-clickwrap/src/react/TermsGate.tsx` |
+| SDK README (integrator examples) | `packages/cl8y-clickwrap/README.md` |

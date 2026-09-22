@@ -61,6 +61,7 @@ export default defineConfig({
         ...process.env,
         VITE_API_BASE_URL: "",
         VITE_TELEGRAM_BOT_NAME: "",
+        // Dev fixture origin only. Production gated origins are dex/bridge — skills/integrator-coverage.
         VITE_REDIRECT_URI_ALLOWLIST: "https://cl8y.com",
         VITE_ALLOW_LOCALHOST_REDIRECT: "true",
       },

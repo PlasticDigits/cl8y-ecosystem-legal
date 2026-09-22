@@ -4,7 +4,9 @@ import { acceptViaConsent } from "./helpers/sign-flow";
 
 /**
  * Portal redirect_uri allowlist (issue #3 / #4).
- * Dev server allowlist: `https://cl8y.com` + localhost via `VITE_ALLOW_LOCALHOST_REDIRECT`.
+ * Dev fixture allowlist: `https://cl8y.com` + localhost via `VITE_ALLOW_LOCALHOST_REDIRECT`.
+ * That fixture is not the production matrix (`https://dex.cl8y.com`, `https://bridge.cl8y.com`);
+ * see `skills/integrator-coverage/SKILL.md`.
  */
 test.describe("redirect_uri allowlist after accept", () => {
   test("allowlisted localhost redirect_uri navigates after accept", async ({ page }) => {
